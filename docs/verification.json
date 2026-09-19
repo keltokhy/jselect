@@ -17,7 +17,7 @@
   "semantic_cost": 0.0,
   "companion_skill_validation": "passed",
   "wheel_matches_tested_source": true,
-  "wheel_sha256": "8e7bfe28f0e2fb125b1a924b4a690553fabba235d1d32a52f990fa522e9f6121",
+  "wheel_sha256": "26e5acba2089e32a3d05cf0d8ecd16de67ed307f62793f4cfc67dbb5b509ee66",
   "wheel_modules_checked": [
     "index.py",
     "__init__.py",
@@ -28,5 +28,6 @@
     "judge.py",
     "select.py",
     "__main__.py"
-  ]
+  ],
+  "release_metadata_check": "twine check --strict passed"
 }

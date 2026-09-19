@@ -50,4 +50,5 @@ Validated on 2026-09-19:
 
 Remaining product limits are explicit: shortlist recall can fail, novelty is lexical, provider latency and
 pricing vary, and selection quality is not a proof of downstream answer quality. There is no claim of
-production validation or universal superiority. No remote repository or PyPI release was requested or made.
+production validation or universal superiority. The initial implementation was validated before release;
+publication is tracked separately in `docs/RELEASING.md`.
