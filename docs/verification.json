@@ -1,0 +1,32 @@
+{
+  "date": "2026-09-19",
+  "unit_tests": 72,
+  "lint": "passed",
+  "format": "passed",
+  "source_distribution": "built",
+  "wheel": "built",
+  "clean_wheel_import": true,
+  "installed_cli_outside_checkout": true,
+  "doctor_local_ready": true,
+  "local_cli": true,
+  "saved_index_cli": true,
+  "parent_passage_readback": true,
+  "semantic_examples": 4,
+  "semantic_tokens": 518,
+  "semantic_calls": 0,
+  "semantic_cost": 0.0,
+  "companion_skill_validation": "passed",
+  "wheel_matches_tested_source": true,
+  "wheel_sha256": "8e7bfe28f0e2fb125b1a924b4a690553fabba235d1d32a52f990fa522e9f6121",
+  "wheel_modules_checked": [
+    "index.py",
+    "__init__.py",
+    "types.py",
+    "inputs.py",
+    "cli.py",
+    "text.py",
+    "judge.py",
+    "select.py",
+    "__main__.py"
+  ]
+}
