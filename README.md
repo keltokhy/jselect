@@ -21,21 +21,22 @@ directories, piped exports, or Python records. This is a **separate tool and pac
 
 ## Install
 
-From this repository (Python 3.10+):
+Python 3.10+:
 
 ```bash
-uv tool install .            # installs the jselect command on PATH
-pip install .               # use jselect from your Python application
+uv tool install jev-select   # installs the jselect command on PATH
+pip install jev-select       # use jselect from your Python application
 ```
 
-For development: `uv sync`, then `uv run jselect ...`. For an editable command: `uv tool install --editable .`.
 The distribution is named `jev-select`; the command and Python import are both `jselect`.
-This repository has not been published to PyPI.
 
 ```bash
 jselect doctor --json
-jselect "Why does signup fail?" examples/conversations.jsonl --tokens 600
+echo 'The signup verification email never arrived.' | jselect "signup problems" --tokens 600
 ```
+
+For development, clone [the repository](https://github.com/keltokhy/jselect), run `uv sync`,
+then `uv run jselect ...`. For an editable command: `uv tool install --editable .`.
 
 If a TypeSafe or OpenRouter key is configured, the default uses **semantic relevance scoring** with Jev.
 Set `TYPESAFE_API_KEY` or `OPENROUTER_API_KEY`, or use existing credentials in
@@ -168,7 +169,7 @@ public vocabulary. Choose the encoding your downstream model uses and leave room
 
 ## Measured results
 
-Measured locally on 2026-09-19; details and frozen reports are in [the benchmark report](docs/BENCHMARKS.md).
+Measured locally on 2026-09-19; details and frozen reports are in [the benchmark report](https://github.com/keltokhy/jselect/blob/main/docs/BENCHMARKS.md).
 
 | Check | Observed result |
 |---|---|
@@ -186,7 +187,7 @@ not calibrated confidence in a final answer. The JSON reports how much of the co
 Default stdout is the exact context string. `--json` returns one object with `schema_version: 1`,
 `task`, `context`, `items`, `tokens`, `token_budget`, `encoding`, `stats`, and `warnings`.
 Each item contains original `text`, a stable content-hash `id`, `sources`, `occurrences`, `relevance`,
-`novelty`, and the selection rule used. See [the output contract](docs/OUTPUT.md).
+`novelty`, and the selection rule used. See [the output contract](https://github.com/keltokhy/jselect/blob/main/docs/OUTPUT.md).
 
 Exit 0 means success, including empty evidence. Exit 2 means invalid input, bad setup, budget refusal,
 or a provider error. Exit 130 means interruption. JSON errors have an `error` object and any available
@@ -202,5 +203,5 @@ uv run ruff format --check src tests bench
 uv build
 ```
 
-See [benchmarks](docs/BENCHMARKS.md), and the
-[companion agent skill](skills/jselect/SKILL.md). MIT licensed.
+See [benchmarks](https://github.com/keltokhy/jselect/blob/main/docs/BENCHMARKS.md), and the
+[companion agent skill](https://github.com/keltokhy/jselect/blob/main/skills/jselect/SKILL.md). MIT licensed.
