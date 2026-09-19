@@ -18,5 +18,13 @@ and environment `pypi`. No long-lived PyPI token is stored in this repository.
 
 ## 0.1.0
 
-Initial release prepared on 2026-09-19. Publication verification will be recorded after the
-registry upload and installation checks complete.
+Published on 2026-09-19 to [GitHub](https://github.com/keltokhy/jselect/releases/tag/v0.1.0)
+and [PyPI](https://pypi.org/project/jev-select/0.1.0/).
+
+- All 72 tests passed on Python 3.10 and 3.13 in GitHub Actions before the upload.
+- PyPI's wheel and source distribution exactly match the locally verified release hashes.
+- A fresh, uncached PyPI installation outside the checkout passed CLI help, doctor, local
+  selection, stdin, saved-index selection, source readback, and Python API token-budget checks.
+- Every Python module in the published wheel matches the release source.
+
+Frozen release evidence: [`releases/0.1.0.json`](releases/0.1.0.json).

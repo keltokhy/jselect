@@ -1,0 +1,48 @@
+{
+  "version": "0.1.0",
+  "git_tag": "v0.1.0",
+  "release_commit": "989732b2b988a7066053ad76ae9711d8fc809d58",
+  "github": "https://github.com/keltokhy/jselect",
+  "pypi": "https://pypi.org/project/jev-select/0.1.0/",
+  "workflow_run": "https://github.com/keltokhy/jselect/actions/runs/35464497506",
+  "artifacts": [
+    {
+      "filename": "jev_select-0.1.0-py3-none-any.whl",
+      "sha256": "26e5acba2089e32a3d05cf0d8ecd16de67ed307f62793f4cfc67dbb5b509ee66",
+      "matches_local_build": true
+    },
+    {
+      "filename": "jev_select-0.1.0.tar.gz",
+      "sha256": "e34bd0124a4802bf5eba5782ff908094a6fd3714d7f5c20b92ece8a22546911b",
+      "matches_local_build": true
+    }
+  ],
+  "fresh_install_from_pypi": true,
+  "installed_cli_help": true,
+  "doctor": {
+    "schema_version": 1,
+    "version": "0.1.0",
+    "local_ready": true,
+    "semantic_configured": false,
+    "auth_verified": false,
+    "api": null,
+    "model": null,
+    "auth_source": "missing",
+    "hint": "Set TYPESAFE_API_KEY or OPENROUTER_API_KEY for semantic scoring."
+  },
+  "local_cli": true,
+  "saved_index_and_source_readback": true,
+  "stdin_cli": true,
+  "python_sdk": {
+    "version": "0.1.0",
+    "installed_inside_fresh_venv": true,
+    "tokens": 34
+  },
+  "wheel_source_matches_release": true,
+  "unit_tests": 72,
+  "ci_python_versions": [
+    "3.10",
+    "3.13"
+  ],
+  "date": "2026-09-19"
+}
