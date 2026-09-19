@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+dist/
+*.egg-info/
+*.jselect
+*.jselect-*
+bench/data/
+bench/out/
+.env
+*.key
+.DS_Store

@@ -1,0 +1,858 @@
+[
+  {
+    "name": "support",
+    "task": "Why are people abandoning signup, and what helps them get through it?",
+    "records": 75,
+    "expected_facets": [
+      "card",
+      "sso",
+      "verification",
+      "workaround"
+    ],
+    "balanced_facets": [
+      "card",
+      "sso",
+      "verification",
+      "workaround"
+    ],
+    "ranked_facets": [
+      "card",
+      "verification",
+      "workaround"
+    ],
+    "balanced_coverage": 1.0,
+    "ranked_coverage": 0.75,
+    "balanced": {
+      "task": "Why are people abandoning signup, and what helps them get through it?",
+      "context": "[1] {\"source\":\"(records)\",\"line\":25,\"id\":\"card-0\",\"chars\":[0,88],\"field\":\"text\"}\nThe free trial wanted my credit card before I could register. I closed the page instead.\n\n[2] {\"source\":\"(records)\",\"line\":27,\"id\":\"workaround-0\",\"chars\":[0,83],\"field\":\"text\"}\nI finally finished signup by opening the email link in the browser where I started.\n\n[3] {\"source\":\"(records)\",\"line\":1,\"id\":\"verification-0\",\"chars\":[0,108],\"field\":\"text\"}\nI entered my email during signup but no verification link arrived. I tried again and gave up.\nReference 100.\n\n[4] {\"source\":\"(records)\",\"line\":26,\"id\":\"sso-0\",\"chars\":[0,90],\"field\":\"text\"}\nRegistration says my company uses single sign-on, but our IT team has never configured it.",
+      "items": [
+        {
+          "id": "de5573a8a759c35d69475b8d7152f848ff2a87db1dfbd5216b7d836dba05944c",
+          "text": "The free trial wanted my credit card before I could register. I closed the page instead.",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "card-0",
+              "line": 25,
+              "start": 0,
+              "end": 88,
+              "field": "text",
+              "record_sha256": "de5573a8a759c35d69475b8d7152f848ff2a87db1dfbd5216b7d836dba05944c",
+              "structured": true,
+              "end_line": 25
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.91,
+          "novelty": 1.0,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        },
+        {
+          "id": "06c81ca8a997bac19bae359e37c572055c196412c0729e987b64024a9ea77814",
+          "text": "I finally finished signup by opening the email link in the browser where I started.",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "workaround-0",
+              "line": 27,
+              "start": 0,
+              "end": 83,
+              "field": "text",
+              "record_sha256": "06c81ca8a997bac19bae359e37c572055c196412c0729e987b64024a9ea77814",
+              "structured": true,
+              "end_line": 27
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.88,
+          "novelty": 1.0,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        },
+        {
+          "id": "667b16cc1c4bed599cb0c77efb6ec714bac9af179327d3b65d0e282fff6f66b4",
+          "text": "I entered my email during signup but no verification link arrived. I tried again and gave up.\nReference 100.",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "verification-0",
+              "line": 1,
+              "start": 0,
+              "end": 108,
+              "field": "text",
+              "record_sha256": "667b16cc1c4bed599cb0c77efb6ec714bac9af179327d3b65d0e282fff6f66b4",
+              "structured": true,
+              "end_line": 1
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.9,
+          "novelty": 0.9595425473379298,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        },
+        {
+          "id": "f85b1c08f1730ce7250d26ba35d49cb32cd10c357032ecc0781ddedde1d676b4",
+          "text": "Registration says my company uses single sign-on, but our IT team has never configured it.",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "sso-0",
+              "line": 26,
+              "start": 0,
+              "end": 90,
+              "field": "text",
+              "record_sha256": "f85b1c08f1730ce7250d26ba35d49cb32cd10c357032ecc0781ddedde1d676b4",
+              "structured": true,
+              "end_line": 26
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.83,
+          "novelty": 0.9893232005275758,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        }
+      ],
+      "tokens": 197,
+      "token_budget": 1000,
+      "encoding": "o200k_base",
+      "stats": {
+        "schema_version": 1,
+        "records": 75,
+        "passages": 75,
+        "unique_passages": 75,
+        "empty_records": 0,
+        "characters": 6981,
+        "chunk_size": 1800,
+        "overlap": 240,
+        "mode": "semantic",
+        "scan": "shortlist",
+        "candidate_limit": 256,
+        "candidates": 75,
+        "source_passages_considered": 75,
+        "passages_evaluated": 75,
+        "selected": 4,
+        "previous_passages": 0,
+        "calls": 10,
+        "cost": 0.000560364,
+        "index_seconds": 0.0,
+        "retrieval_seconds": 0.0013726249890169129,
+        "scoring_seconds": 1.1185111250088084,
+        "selection_seconds": 0.0014675420097773895,
+        "seconds": 1.2297074579983018,
+        "selection_method": "greedy_relevance_novelty_per_token",
+        "diversity": 0.7,
+        "threshold": 0.25,
+        "cached_passages": 0,
+        "scored_passages": 75,
+        "retries": 0,
+        "input_tokens": 13342,
+        "cost_source": "provider",
+        "model": "typesafe/jev-1.13-20260917",
+        "api": "openrouter",
+        "estimated_cost_upper_bound": 0.002539026
+      },
+      "warnings": [],
+      "schema_version": 1
+    },
+    "ranked": {
+      "task": "Why are people abandoning signup, and what helps them get through it?",
+      "context": "[1] {\"source\":\"(records)\",\"line\":25,\"id\":\"card-0\",\"chars\":[0,88],\"field\":\"text\"}\nThe free trial wanted my credit card before I could register. I closed the page instead.\n\n[2] {\"source\":\"(records)\",\"line\":27,\"id\":\"workaround-0\",\"chars\":[0,83],\"field\":\"text\"}\nI finally finished signup by opening the email link in the browser where I started.\n\n[3] {\"source\":\"(records)\",\"line\":1,\"id\":\"verification-0\",\"chars\":[0,108],\"field\":\"text\"}\nI entered my email during signup but no verification link arrived. I tried again and gave up.\nReference 100.\n\n[4] {\"source\":\"(records)\",\"line\":16,\"id\":\"verification-15\",\"chars\":[0,108],\"field\":\"text\"}\nI entered my email during signup but no verification link arrived. I tried again and gave up.\nReference 115.",
+      "items": [
+        {
+          "id": "de5573a8a759c35d69475b8d7152f848ff2a87db1dfbd5216b7d836dba05944c",
+          "text": "The free trial wanted my credit card before I could register. I closed the page instead.",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "card-0",
+              "line": 25,
+              "start": 0,
+              "end": 88,
+              "field": "text",
+              "record_sha256": "de5573a8a759c35d69475b8d7152f848ff2a87db1dfbd5216b7d836dba05944c",
+              "structured": true,
+              "end_line": 25
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.91,
+          "novelty": 1.0,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        },
+        {
+          "id": "06c81ca8a997bac19bae359e37c572055c196412c0729e987b64024a9ea77814",
+          "text": "I finally finished signup by opening the email link in the browser where I started.",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "workaround-0",
+              "line": 27,
+              "start": 0,
+              "end": 83,
+              "field": "text",
+              "record_sha256": "06c81ca8a997bac19bae359e37c572055c196412c0729e987b64024a9ea77814",
+              "structured": true,
+              "end_line": 27
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.88,
+          "novelty": 1.0,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        },
+        {
+          "id": "667b16cc1c4bed599cb0c77efb6ec714bac9af179327d3b65d0e282fff6f66b4",
+          "text": "I entered my email during signup but no verification link arrived. I tried again and gave up.\nReference 100.",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "verification-0",
+              "line": 1,
+              "start": 0,
+              "end": 108,
+              "field": "text",
+              "record_sha256": "667b16cc1c4bed599cb0c77efb6ec714bac9af179327d3b65d0e282fff6f66b4",
+              "structured": true,
+              "end_line": 1
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.9,
+          "novelty": 0.9595425473379298,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        },
+        {
+          "id": "9e7f8dc20e664ee312f0b1b5b1f93003f682de0f94ad5f8d2020ecafc588f0ab",
+          "text": "I entered my email during signup but no verification link arrived. I tried again and gave up.\nReference 115.",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "verification-15",
+              "line": 16,
+              "start": 0,
+              "end": 108,
+              "field": "text",
+              "record_sha256": "9e7f8dc20e664ee312f0b1b5b1f93003f682de0f94ad5f8d2020ecafc588f0ab",
+              "structured": true,
+              "end_line": 16
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.9,
+          "novelty": 0.3229464955770409,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        }
+      ],
+      "tokens": 201,
+      "token_budget": 1000,
+      "encoding": "o200k_base",
+      "stats": {
+        "schema_version": 1,
+        "records": 75,
+        "passages": 75,
+        "unique_passages": 75,
+        "empty_records": 0,
+        "characters": 6981,
+        "chunk_size": 1800,
+        "overlap": 240,
+        "mode": "semantic",
+        "scan": "shortlist",
+        "candidate_limit": 256,
+        "candidates": 75,
+        "source_passages_considered": 75,
+        "passages_evaluated": 75,
+        "selected": 4,
+        "previous_passages": 0,
+        "calls": 0,
+        "cost": 0.0,
+        "index_seconds": 0.0,
+        "retrieval_seconds": 0.0014002080133650452,
+        "scoring_seconds": 0.00430158399103675,
+        "selection_seconds": 0.001349333004327491,
+        "seconds": 0.0077245830034371465,
+        "selection_method": "greedy_relevance_novelty_per_token",
+        "diversity": 0,
+        "threshold": 0.25,
+        "cached_passages": 75,
+        "scored_passages": 0,
+        "retries": 0,
+        "input_tokens": 0,
+        "cost_source": "provider_or_list_price",
+        "model": "typesafe/jev-1.13",
+        "api": "openrouter",
+        "estimated_cost_upper_bound": 0.0
+      },
+      "warnings": [],
+      "schema_version": 1
+    }
+  },
+  {
+    "name": "code",
+    "task": "Find reasons this worker process keeps retaining memory after jobs finish.",
+    "records": 75,
+    "expected_facets": [
+      "cache",
+      "listener",
+      "released",
+      "retained_jobs"
+    ],
+    "balanced_facets": [
+      "cache",
+      "listener",
+      "released",
+      "retained_jobs"
+    ],
+    "ranked_facets": [
+      "cache",
+      "listener",
+      "retained_jobs"
+    ],
+    "balanced_coverage": 1.0,
+    "ranked_coverage": 0.75,
+    "balanced": {
+      "task": "Find reasons this worker process keeps retaining memory after jobs finish.",
+      "context": "[1] {\"source\":\"(records)\",\"line\":26,\"id\":\"listener-0\",\"chars\":[0,90],\"field\":\"text\"}\n# A listener is added per job and never removed.\nemitter.on('result', lambda: job.payload)\n\n[2] {\"source\":\"(records)\",\"line\":25,\"id\":\"cache-0\",\"chars\":[0,83],\"field\":\"text\"}\n# Worker request cache has no size limit or eviction.\nrequest_cache[key] = response\n\n[3] {\"source\":\"(records)\",\"line\":24,\"id\":\"retained_jobs-23\",\"chars\":[0,100],\"field\":\"text\"}\n# Completed worker jobs stay reachable from a global list.\ncompleted_jobs.append(job)\nReference 123.\n\n[4] {\"source\":\"(records)\",\"line\":27,\"id\":\"released-0\",\"chars\":[0,95],\"field\":\"text\"}\n# Worker cleanup releases large buffers when a job finishes.\njob.payload = None\nbuffers.clear()",
+      "items": [
+        {
+          "id": "2eb38e910bc98702091aa5344982471ef456595267fd9ecf4410bcc81b8361f2",
+          "text": "# A listener is added per job and never removed.\nemitter.on('result', lambda: job.payload)",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "listener-0",
+              "line": 26,
+              "start": 0,
+              "end": 90,
+              "field": "text",
+              "record_sha256": "2eb38e910bc98702091aa5344982471ef456595267fd9ecf4410bcc81b8361f2",
+              "structured": true,
+              "end_line": 26
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.94,
+          "novelty": 1.0,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        },
+        {
+          "id": "dad4ab306fea0a5477e1a3e010878400e398364cfba5e452019cca2b45d5d904",
+          "text": "# Worker request cache has no size limit or eviction.\nrequest_cache[key] = response",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "cache-0",
+              "line": 25,
+              "start": 0,
+              "end": 83,
+              "field": "text",
+              "record_sha256": "dad4ab306fea0a5477e1a3e010878400e398364cfba5e452019cca2b45d5d904",
+              "structured": true,
+              "end_line": 25
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.91,
+          "novelty": 1.0,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        },
+        {
+          "id": "a90102f51467b2b72278d36059d5686e5a94e0aad2d6e17ec7dfd4b436436655",
+          "text": "# Completed worker jobs stay reachable from a global list.\ncompleted_jobs.append(job)\nReference 123.",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "retained_jobs-23",
+              "line": 24,
+              "start": 0,
+              "end": 100,
+              "field": "text",
+              "record_sha256": "a90102f51467b2b72278d36059d5686e5a94e0aad2d6e17ec7dfd4b436436655",
+              "structured": true,
+              "end_line": 24
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.93,
+          "novelty": 0.9898493132889168,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        },
+        {
+          "id": "4237f829578643ada9c645f7f7dd2d1a2a9bed3a5bae01dbe2934d16fa26d7a6",
+          "text": "# Worker cleanup releases large buffers when a job finishes.\njob.payload = None\nbuffers.clear()",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "released-0",
+              "line": 27,
+              "start": 0,
+              "end": 95,
+              "field": "text",
+              "record_sha256": "4237f829578643ada9c645f7f7dd2d1a2a9bed3a5bae01dbe2934d16fa26d7a6",
+              "structured": true,
+              "end_line": 27
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.76,
+          "novelty": 0.937639007450486,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        }
+      ],
+      "tokens": 201,
+      "token_budget": 1000,
+      "encoding": "o200k_base",
+      "stats": {
+        "schema_version": 1,
+        "records": 75,
+        "passages": 75,
+        "unique_passages": 75,
+        "empty_records": 0,
+        "characters": 6316,
+        "chunk_size": 1800,
+        "overlap": 240,
+        "mode": "semantic",
+        "scan": "shortlist",
+        "candidate_limit": 256,
+        "candidates": 75,
+        "source_passages_considered": 75,
+        "passages_evaluated": 75,
+        "selected": 4,
+        "previous_passages": 0,
+        "calls": 10,
+        "cost": 0.000565404,
+        "index_seconds": 0.0,
+        "retrieval_seconds": 0.0013605830172309652,
+        "scoring_seconds": 0.5361224999942351,
+        "selection_seconds": 0.002767416008282453,
+        "seconds": 0.541049916006159,
+        "selection_method": "greedy_relevance_novelty_per_token",
+        "diversity": 0.7,
+        "threshold": 0.25,
+        "cached_passages": 0,
+        "scored_passages": 75,
+        "retries": 0,
+        "input_tokens": 13462,
+        "cost_source": "provider",
+        "model": "typesafe/jev-1.13-20260917",
+        "api": "openrouter",
+        "estimated_cost_upper_bound": 0.0025300380000000005
+      },
+      "warnings": [],
+      "schema_version": 1
+    },
+    "ranked": {
+      "task": "Find reasons this worker process keeps retaining memory after jobs finish.",
+      "context": "[1] {\"source\":\"(records)\",\"line\":26,\"id\":\"listener-0\",\"chars\":[0,90],\"field\":\"text\"}\n# A listener is added per job and never removed.\nemitter.on('result', lambda: job.payload)\n\n[2] {\"source\":\"(records)\",\"line\":25,\"id\":\"cache-0\",\"chars\":[0,83],\"field\":\"text\"}\n# Worker request cache has no size limit or eviction.\nrequest_cache[key] = response\n\n[3] {\"source\":\"(records)\",\"line\":24,\"id\":\"retained_jobs-23\",\"chars\":[0,100],\"field\":\"text\"}\n# Completed worker jobs stay reachable from a global list.\ncompleted_jobs.append(job)\nReference 123.\n\n[4] {\"source\":\"(records)\",\"line\":1,\"id\":\"retained_jobs-0\",\"chars\":[0,100],\"field\":\"text\"}\n# Completed worker jobs stay reachable from a global list.\ncompleted_jobs.append(job)\nReference 100.",
+      "items": [
+        {
+          "id": "2eb38e910bc98702091aa5344982471ef456595267fd9ecf4410bcc81b8361f2",
+          "text": "# A listener is added per job and never removed.\nemitter.on('result', lambda: job.payload)",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "listener-0",
+              "line": 26,
+              "start": 0,
+              "end": 90,
+              "field": "text",
+              "record_sha256": "2eb38e910bc98702091aa5344982471ef456595267fd9ecf4410bcc81b8361f2",
+              "structured": true,
+              "end_line": 26
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.94,
+          "novelty": 1.0,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        },
+        {
+          "id": "dad4ab306fea0a5477e1a3e010878400e398364cfba5e452019cca2b45d5d904",
+          "text": "# Worker request cache has no size limit or eviction.\nrequest_cache[key] = response",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "cache-0",
+              "line": 25,
+              "start": 0,
+              "end": 83,
+              "field": "text",
+              "record_sha256": "dad4ab306fea0a5477e1a3e010878400e398364cfba5e452019cca2b45d5d904",
+              "structured": true,
+              "end_line": 25
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.91,
+          "novelty": 1.0,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        },
+        {
+          "id": "a90102f51467b2b72278d36059d5686e5a94e0aad2d6e17ec7dfd4b436436655",
+          "text": "# Completed worker jobs stay reachable from a global list.\ncompleted_jobs.append(job)\nReference 123.",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "retained_jobs-23",
+              "line": 24,
+              "start": 0,
+              "end": 100,
+              "field": "text",
+              "record_sha256": "a90102f51467b2b72278d36059d5686e5a94e0aad2d6e17ec7dfd4b436436655",
+              "structured": true,
+              "end_line": 24
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.93,
+          "novelty": 0.9898493132889168,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        },
+        {
+          "id": "235d28ba246dcfc7a1c01cd053cca04bffd99143684f644c34d362590dc3ae00",
+          "text": "# Completed worker jobs stay reachable from a global list.\ncompleted_jobs.append(job)\nReference 100.",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "retained_jobs-0",
+              "line": 1,
+              "start": 0,
+              "end": 100,
+              "field": "text",
+              "record_sha256": "235d28ba246dcfc7a1c01cd053cca04bffd99143684f644c34d362590dc3ae00",
+              "structured": true,
+              "end_line": 1
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.9,
+          "novelty": 0.3638250820523804,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        }
+      ],
+      "tokens": 204,
+      "token_budget": 1000,
+      "encoding": "o200k_base",
+      "stats": {
+        "schema_version": 1,
+        "records": 75,
+        "passages": 75,
+        "unique_passages": 75,
+        "empty_records": 0,
+        "characters": 6316,
+        "chunk_size": 1800,
+        "overlap": 240,
+        "mode": "semantic",
+        "scan": "shortlist",
+        "candidate_limit": 256,
+        "candidates": 75,
+        "source_passages_considered": 75,
+        "passages_evaluated": 75,
+        "selected": 4,
+        "previous_passages": 0,
+        "calls": 0,
+        "cost": 0.0,
+        "index_seconds": 0.0,
+        "retrieval_seconds": 0.0024518330028513446,
+        "scoring_seconds": 0.006997582997428253,
+        "selection_seconds": 0.0021044590102974325,
+        "seconds": 0.012617708998732269,
+        "selection_method": "greedy_relevance_novelty_per_token",
+        "diversity": 0,
+        "threshold": 0.25,
+        "cached_passages": 75,
+        "scored_passages": 0,
+        "retries": 0,
+        "input_tokens": 0,
+        "cost_source": "provider_or_list_price",
+        "model": "typesafe/jev-1.13",
+        "api": "openrouter",
+        "estimated_cost_upper_bound": 0.0
+      },
+      "warnings": [],
+      "schema_version": 1
+    }
+  },
+  {
+    "name": "contracts",
+    "task": "What determines whether we can end this vendor subscription without paying for another year?",
+    "records": 75,
+    "expected_facets": [
+      "amendment",
+      "exception",
+      "fees",
+      "notice"
+    ],
+    "balanced_facets": [
+      "amendment",
+      "exception",
+      "fees",
+      "notice"
+    ],
+    "ranked_facets": [
+      "notice"
+    ],
+    "balanced_coverage": 1.0,
+    "ranked_coverage": 0.25,
+    "balanced": {
+      "task": "What determines whether we can end this vendor subscription without paying for another year?",
+      "context": "[1] {\"source\":\"(records)\",\"line\":7,\"id\":\"notice-6\",\"chars\":[0,117],\"field\":\"text\"}\nThe subscription renews for twelve months unless written notice is received sixty days before renewal.\nReference 106.\n\n[2] {\"source\":\"(records)\",\"line\":27,\"id\":\"amendment-0\",\"chars\":[0,100],\"field\":\"text\"}\nThis signed amendment replaces automatic renewal with month-to-month service after the initial year.\n\n[3] {\"source\":\"(records)\",\"line\":25,\"id\":\"exception-0\",\"chars\":[0,110],\"field\":\"text\"}\nA customer may terminate immediately without future fees after an uncured material breach lasting thirty days.\n\n[4] {\"source\":\"(records)\",\"line\":26,\"id\":\"fees-0\",\"chars\":[0,100],\"field\":\"text\"}\nConvenience termination during an active annual term does not cancel outstanding fees for that term.",
+      "items": [
+        {
+          "id": "223149ca0f0775209ae5a431e1b4cf7d2813a176ae999f05846f0726dd8930c2",
+          "text": "The subscription renews for twelve months unless written notice is received sixty days before renewal.\nReference 106.",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "notice-6",
+              "line": 7,
+              "start": 0,
+              "end": 117,
+              "field": "text",
+              "record_sha256": "223149ca0f0775209ae5a431e1b4cf7d2813a176ae999f05846f0726dd8930c2",
+              "structured": true,
+              "end_line": 7
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.95,
+          "novelty": 1.0,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        },
+        {
+          "id": "23c5bb3f12bd8c7cc99a3b32d85ce869e3afcd470897dc2a404c42148ed67e87",
+          "text": "This signed amendment replaces automatic renewal with month-to-month service after the initial year.",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "amendment-0",
+              "line": 27,
+              "start": 0,
+              "end": 100,
+              "field": "text",
+              "record_sha256": "23c5bb3f12bd8c7cc99a3b32d85ce869e3afcd470897dc2a404c42148ed67e87",
+              "structured": true,
+              "end_line": 27
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.88,
+          "novelty": 0.9899997928130374,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        },
+        {
+          "id": "03d675e9f2063dd91fb0e0bae290d6d10df05d9568462db8b8de48c7e04f4701",
+          "text": "A customer may terminate immediately without future fees after an uncured material breach lasting thirty days.",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "exception-0",
+              "line": 25,
+              "start": 0,
+              "end": 110,
+              "field": "text",
+              "record_sha256": "03d675e9f2063dd91fb0e0bae290d6d10df05d9568462db8b8de48c7e04f4701",
+              "structured": true,
+              "end_line": 25
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.82,
+          "novelty": 0.9804137323682142,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        },
+        {
+          "id": "f1b84fc4df02233226c53b6e4c4fb92739164b928d305e49782e1cc62f89b13d",
+          "text": "Convenience termination during an active annual term does not cancel outstanding fees for that term.",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "fees-0",
+              "line": 26,
+              "start": 0,
+              "end": 100,
+              "field": "text",
+              "record_sha256": "f1b84fc4df02233226c53b6e4c4fb92739164b928d305e49782e1cc62f89b13d",
+              "structured": true,
+              "end_line": 26
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.8,
+          "novelty": 0.9807133735470006,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        }
+      ],
+      "tokens": 194,
+      "token_budget": 1000,
+      "encoding": "o200k_base",
+      "stats": {
+        "schema_version": 1,
+        "records": 75,
+        "passages": 75,
+        "unique_passages": 75,
+        "empty_records": 0,
+        "characters": 7774,
+        "chunk_size": 1800,
+        "overlap": 240,
+        "mode": "semantic",
+        "scan": "shortlist",
+        "candidate_limit": 256,
+        "candidates": 75,
+        "source_passages_considered": 75,
+        "passages_evaluated": 75,
+        "selected": 4,
+        "previous_passages": 0,
+        "calls": 10,
+        "cost": 0.0005595239999999999,
+        "index_seconds": 0.0,
+        "retrieval_seconds": 0.001740584004437551,
+        "scoring_seconds": 0.4916597499977797,
+        "selection_seconds": 0.003373958999873139,
+        "seconds": 0.49733800000103656,
+        "selection_method": "greedy_relevance_novelty_per_token",
+        "diversity": 0.7,
+        "threshold": 0.25,
+        "cached_passages": 0,
+        "scored_passages": 75,
+        "retries": 0,
+        "input_tokens": 13322,
+        "cost_source": "provider",
+        "model": "typesafe/jev-1.13-20260917",
+        "api": "openrouter",
+        "estimated_cost_upper_bound": 0.0026447820000000005
+      },
+      "warnings": [],
+      "schema_version": 1
+    },
+    "ranked": {
+      "task": "What determines whether we can end this vendor subscription without paying for another year?",
+      "context": "[1] {\"source\":\"(records)\",\"line\":7,\"id\":\"notice-6\",\"chars\":[0,117],\"field\":\"text\"}\nThe subscription renews for twelve months unless written notice is received sixty days before renewal.\nReference 106.\n\n[2] {\"source\":\"(records)\",\"line\":15,\"id\":\"notice-14\",\"chars\":[0,117],\"field\":\"text\"}\nThe subscription renews for twelve months unless written notice is received sixty days before renewal.\nReference 114.\n\n[3] {\"source\":\"(records)\",\"line\":8,\"id\":\"notice-7\",\"chars\":[0,117],\"field\":\"text\"}\nThe subscription renews for twelve months unless written notice is received sixty days before renewal.\nReference 107.\n\n[4] {\"source\":\"(records)\",\"line\":9,\"id\":\"notice-8\",\"chars\":[0,117],\"field\":\"text\"}\nThe subscription renews for twelve months unless written notice is received sixty days before renewal.\nReference 108.",
+      "items": [
+        {
+          "id": "223149ca0f0775209ae5a431e1b4cf7d2813a176ae999f05846f0726dd8930c2",
+          "text": "The subscription renews for twelve months unless written notice is received sixty days before renewal.\nReference 106.",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "notice-6",
+              "line": 7,
+              "start": 0,
+              "end": 117,
+              "field": "text",
+              "record_sha256": "223149ca0f0775209ae5a431e1b4cf7d2813a176ae999f05846f0726dd8930c2",
+              "structured": true,
+              "end_line": 7
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.95,
+          "novelty": 1.0,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        },
+        {
+          "id": "24818f7a8a537db5c86d1a8f701516c281a57bcb052477ac49935cbf1b20c684",
+          "text": "The subscription renews for twelve months unless written notice is received sixty days before renewal.\nReference 114.",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "notice-14",
+              "line": 15,
+              "start": 0,
+              "end": 117,
+              "field": "text",
+              "record_sha256": "24818f7a8a537db5c86d1a8f701516c281a57bcb052477ac49935cbf1b20c684",
+              "structured": true,
+              "end_line": 15
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.95,
+          "novelty": 0.34402939164217294,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        },
+        {
+          "id": "2fcd9f9062a6d40cac9b8456c53229bcd54e09c74be723314b6bf3a25e8f43a7",
+          "text": "The subscription renews for twelve months unless written notice is received sixty days before renewal.\nReference 107.",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "notice-7",
+              "line": 8,
+              "start": 0,
+              "end": 117,
+              "field": "text",
+              "record_sha256": "2fcd9f9062a6d40cac9b8456c53229bcd54e09c74be723314b6bf3a25e8f43a7",
+              "structured": true,
+              "end_line": 8
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.94,
+          "novelty": 0.34402939164217294,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        },
+        {
+          "id": "a710e054d5a647776304ed09e3389d56f1e3e7b0d639843d34c22513582c9bc2",
+          "text": "The subscription renews for twelve months unless written notice is received sixty days before renewal.\nReference 108.",
+          "sources": [
+            {
+              "source": "(records)",
+              "record_id": "notice-8",
+              "line": 9,
+              "start": 0,
+              "end": 117,
+              "field": "text",
+              "record_sha256": "a710e054d5a647776304ed09e3389d56f1e3e7b0d639843d34c22513582c9bc2",
+              "structured": true,
+              "end_line": 9
+            }
+          ],
+          "occurrences": 1,
+          "relevance": 0.94,
+          "novelty": 0.34402939164217294,
+          "reason": "semantic relevance; greedy selection balances relevance, text novelty, and token cost"
+        }
+      ],
+      "tokens": 204,
+      "token_budget": 1000,
+      "encoding": "o200k_base",
+      "stats": {
+        "schema_version": 1,
+        "records": 75,
+        "passages": 75,
+        "unique_passages": 75,
+        "empty_records": 0,
+        "characters": 7774,
+        "chunk_size": 1800,
+        "overlap": 240,
+        "mode": "semantic",
+        "scan": "shortlist",
+        "candidate_limit": 256,
+        "candidates": 75,
+        "source_passages_considered": 75,
+        "passages_evaluated": 75,
+        "selected": 4,
+        "previous_passages": 0,
+        "calls": 0,
+        "cost": 0.0,
+        "index_seconds": 0.0,
+        "retrieval_seconds": 0.0022349589853547513,
+        "scoring_seconds": 0.007310458007850684,
+        "selection_seconds": 0.0021988750086165965,
+        "seconds": 0.013069541993900202,
+        "selection_method": "greedy_relevance_novelty_per_token",
+        "diversity": 0,
+        "threshold": 0.25,
+        "cached_passages": 75,
+        "scored_passages": 0,
+        "retries": 0,
+        "input_tokens": 0,
+        "cost_source": "provider_or_list_price",
+        "model": "typesafe/jev-1.13",
+        "api": "openrouter",
+        "estimated_cost_upper_bound": 0.0
+      },
+      "warnings": [],
+      "schema_version": 1
+    }
+  }
+]
