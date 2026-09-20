@@ -63,16 +63,21 @@ source rows; detailed member mappings are available in JSON.
 - `records`, `passages`, `unique_passages`, `characters`: indexed snapshot counts. Grouped conversations
   count as records. Long records can create multiple overlapping passages.
 - `source_passages_considered`: indexed passages entering retrieval/preparation.
+- `scan`: resolved scan mode, `all` or `shortlist`. Defaults to `all` for semantic/custom scoring and
+  `shortlist` for local mode.
 - `passages_evaluated`: fitted passages given to the local/semantic/custom scorer.
 - `candidates`: passages retained for final packing; capped by `candidate_limit`.
 - `scored_passages`: newly scored by Jev; `cached_passages` were reused. Neither measures correctness.
 - `calls`, `retries`, `input_tokens`, `cost`, `cost_source`, `model`, `api`: provider work and provenance.
 - `index_seconds`, `retrieval_seconds`, `scoring_seconds`, `selection_seconds`, `seconds`: wall-clock stages.
 
-Token fitting can subdivide candidates. In full-scan mode, every fitted, previously unseen passage is
-evaluated, and a relevance/diversity pool bounded by `--candidates` is retained. The pool and final packing
-are heuristic. Local mode uses lexical matching; semantic shortlist mode cannot recover a passage that
-never enters its shortlist. Warnings disclose these boundaries.
+Token fitting can subdivide candidates. In the default semantic/custom full-scan mode, every fitted,
+previously unseen passage is evaluated, and a relevance/diversity pool bounded by `--candidates` is retained.
+The pool and final packing are heuristic. The candidate cap limits retained passages, not full-scan
+evaluation coverage. A semantic
+scan that exceeds the estimated dollar budget fails before scoring requests; it does not fall back to a
+shortlist. Local mode uses lexical matching; explicit semantic shortlist mode cannot recover a passage
+that never enters its shortlist. Warnings disclose these boundaries.
 
 Source texts may contain instructions or misleading claims. The selector's prompt tells its scorer to
 treat text as evidence. This does not make excerpts trusted instructions for a consuming agent.

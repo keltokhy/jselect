@@ -190,7 +190,7 @@ async def aselect(
     batch_size: int = 8,
     timeout: float = 20,
     cache: bool = True,
-    scan: str = "shortlist",
+    scan: str | None = None,
     chunk_size: int = 1800,
     overlap: int = 240,
     _transport=None,
@@ -199,13 +199,15 @@ async def aselect(
 
     `tokens` applies to result.context, not the full JSON metadata or your surrounding prompt.
     `mode=auto` uses Jev if configured, otherwise explicitly reports local lexical selection.
+    Omitting `scan` scores all eligible passages with semantic/custom scorers; local mode uses
+    the lexical shortlist. Set `scan="shortlist"` to bound passages evaluated before scoring.
     """
     started = time.perf_counter()
     if not isinstance(task, str) or not task.strip() or len(task) > 4000:
         raise ValueError("task must contain 1..4000 characters")
     if isinstance(tokens, bool) or not isinstance(tokens, int) or tokens < 0:
         raise ValueError("tokens must be a nonnegative integer")
-    if mode not in {"auto", "local", "semantic"} or scan not in {"shortlist", "all"}:
+    if mode not in {"auto", "local", "semantic"} or scan not in {None, "shortlist", "all"}:
         raise ValueError("mode must be auto/local/semantic; scan must be shortlist/all")
     if not 0 <= diversity <= 1 or candidates < 1 or (max_items is not None and max_items < 1):
         raise ValueError("diversity must be 0..1; candidates and max_items must be positive")
@@ -221,6 +223,8 @@ async def aselect(
             "semantic mode needs TYPESAFE_API_KEY or OPENROUTER_API_KEY; use --mode local offline"
         )
     mode = "custom" if scorer else "semantic" if backend else "local"
+    if scan is None:
+        scan = "shortlist" if mode == "local" else "all"
     if scan == "all" and mode == "local":
         raise ValueError("--scan all requires a semantic or custom scorer; local mode uses the lexical index")
     threshold = threshold if threshold is not None else (0.25 if mode != "local" else 0.0)

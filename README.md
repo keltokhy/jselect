@@ -44,7 +44,7 @@ Set `TYPESAFE_API_KEY` or `OPENROUTER_API_KEY`, or use existing credentials in
 `JEV_API`, `JEV_MODEL`, and `JEV_URL` overrides are supported. Gateways use `JEV_GATEWAY_URL` and
 `JEV_GATEWAY_API_KEY`, or `~/.config/jev/gateway.url` and `gateway.key`.
 
-Without credentials, jselect uses local lexical retrieval and says so. Force that with `--local`.
+Without credentials, jselect uses local lexical retrieval with a shortlist and says so. Force that with `--local`.
 Use `--mode semantic` to require semantic scoring and fail if credentials are missing.
 
 ## Use it across your data
@@ -97,13 +97,22 @@ agent asks for more evidence or brings an existing reference set. It does not pr
 will introduce a new semantic idea. Saved indexes are snapshots: rebuild with `index ... --force` when
 the source changes. Replacement is atomic, so a failed rebuild leaves the previous index intact.
 
-For maximum retrieval breadth, use `--scan all`. This scores every unique passage that fits the output
-budget and is not already supplied in `--against`, then keeps a bounded pool for final selection.
-The full scan is preflighted against the estimated dollar budget before any calls are made.
+Semantic and custom scoring default to `--scan all`. This scores every eligible passage across the
+collection, splitting oversized passages to fit the output budget and excluding excerpts already supplied
+in `--against`, then keeps a bounded pool for final selection. The full semantic scan is preflighted against
+the estimated dollar budget before any calls are made. If it exceeds the budget, the command fails without
+making scoring requests; it never silently switches to a shortlist.
 
 ```bash
-jselect "Signs the customer has lost trust" conversations.jselect --scan all --budget 0.25
+jselect "Signs the customer has lost trust" conversations.jselect --budget 0.25
+
+# Explicitly trade retrieval coverage for less scoring work
+jselect "Signs the customer has lost trust" conversations.jselect --scan shortlist --candidates 256
 ```
+
+`--candidates` defaults to 256 and limits the pool retained **after** scoring in a full scan. With
+`--scan shortlist`, it limits passages evaluated **before** final selection. Local mode defaults to a
+lexical shortlist; explicitly requesting `--scan all` requires a semantic or custom scorer.
 
 ## Python and agents
 
@@ -117,7 +126,7 @@ records = [
 result = select(records, task="What blocks registration?", tokens=500)
 payload = result.to_dict()   # same schema as --json
 
-# Reuse an index in a process; no source scanning on each query.
+# Reuse an index in a process; no source re-reading or re-indexing on each query.
 with Index.build(records) as index:
     first = index.select(task="What blocks registration?", tokens=500)
     more = index.select(task="What blocks registration?", tokens=500, against=first)
@@ -135,8 +144,9 @@ result = select(records, task="What blocks registration?", tokens=500, scorer=ju
 Custom scorers may be async functions or objects exposing `score(task, passages)`. Full scans invoke
 them in blocks of at most 256 passages. Use `Record(text, id=..., source=...)` for explicit provenance.
 A string or `Path` passed directly to `select` is an input path; strings inside an iterable are records.
-To use passages already retrieved by another system, pass them as records; set `scan="all"` with a
-custom or semantic scorer if the list exceeds the candidate limit and every passage must be evaluated.
+To use passages already retrieved by another system, pass them as records. A custom or semantic scorer
+evaluates all eligible passages by default, even when the list exceeds the candidate limit. Set
+`scan="shortlist"` to opt into retrieval before scoring.
 
 Pass **`result.context`** to your agent. The full JSON includes additional metadata and is not subject
 to the context token budget. Treat excerpts as source data rather than agent instructions.
@@ -145,12 +155,18 @@ to the context token budget. Treat excerpts as source data rather than agent ins
 
 1. Build or open a SQLite FTS5 index. Long records become overlapping, source-preserving passages.
    Exact repeated passages share one indexed text while retaining occurrence counts and up to five sources.
-2. Shortlist up to 256 passages by default. Most come from BM25 with a text-diversity adjustment;
-   20% of slots are reserved for deterministic exploration in semantic mode. This is not exhaustive retrieval.
+2. By default, visit every indexed passage for semantic/custom scoring. Split oversized passages before
+   scoring and exclude excerpts already supplied in `--against`. Preflight the entire semantic scan's
+   estimated cost before making calls.
 3. Score relevance using small batches of Jev decisions. The question explicitly includes contradicting
-   evidence. Scores are cached per endpoint, model, prompt version, task, and exact passage.
+   evidence. Scores are cached per endpoint, model, prompt version, task, and exact passage. Keep a
+   relevance/diversity pool of up to 256 passages for final selection; this cap does not limit scan coverage.
 4. Greedily balance relevance, text novelty, and passage token cost. Citation headers and separators count
-   toward the budget. Oversized passages are split **before** scoring; returned text is never generated.
+   toward the budget; returned text is never generated.
+
+With explicit `--scan shortlist`, retrieve up to 256 candidates before scoring. Most come from BM25 with
+a text-diversity adjustment; 20% of slots are reserved for deterministic exploration in semantic mode.
+This mode can miss evidence outside the shortlist. Local mode uses lexical scoring and a shortlist.
 
 The defaults are eight passages per request, eight requests in flight, a 20-second total request deadline,
 and a **$0.05 estimated spend budget**. Jev models are versioned (`jev-1.13.0` on TypeSafe and
@@ -160,7 +176,9 @@ transient errors within the deadline. Errors retain completed cache entries for 
 The dollar guard uses a conservative UTF-8 byte estimate and the listed Jev input price. Actual provider
 or gateway pricing and unreported usage can differ; this is not a provider-enforced billing cap. JSON
 reports measured cost when available and marks list-price estimates. Failed requests without usage
-reports may have incurred additional costs. Use `--candidates`, `--batch-size`, and `--budget` to bound work.
+reports may have incurred additional costs. Use `--budget` to bound estimated semantic spend and
+`--batch-size` to bound each request. To cap the number of passages evaluated, explicitly use
+`--scan shortlist --candidates N`.
 `--no-cache` disables the disk score cache at `~/.cache/jselect/scores.sqlite`.
 
 Token counting uses `o200k_base` by default. Set `--encoding` to another tiktoken encoding/model, or `bytes`
@@ -174,10 +192,11 @@ Measured locally on 2026-09-19; details and frozen reports are in [the benchmark
 | Check | Observed result |
 |---|---|
 | One million distinct generated log records | 13.64 s to index; 0.40 s median repeated **local** query; 143 MB peak process memory |
-| 30 SciFact research queries, 2,000 tokens, 256 candidates, cache disabled | 86.7% mean labeled-source recall vs 78.3% for BM25 ranking; 1.86 s median; $0.149 total |
+| 30 SciFact research queries, shortlist mode, 2,000 tokens, 256 candidates, cache disabled | 86.7% mean labeled-source recall vs 78.3% for BM25 ranking; 1.86 s median; $0.149 total |
 | Handwritten support, code, and contract fixtures | All 4 intended evidence types in 4 passages in each fixture; relevance-only variant covered 3, 3, and 1 |
 
-These are scoped measurements, not guarantees for arbitrary data, agent answer quality, or future API
+The SciFact result measures the explicit shortlist mode, not the full-scan default. These are scoped
+measurements, not guarantees for arbitrary data, agent answer quality, or future API
 latency. A selected set cannot establish prevalence or causation. Diversity is a lexical heuristic;
 it does not certify balanced viewpoints or find every contradiction. Semantic scores are model judgments,
 not calibrated confidence in a final answer. The JSON reports how much of the collection was considered.

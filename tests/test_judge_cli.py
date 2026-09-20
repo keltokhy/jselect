@@ -54,6 +54,34 @@ def test_semantic_scoring_batches_and_cached_results(monkeypatch):
     assert second.stats["cached_passages"] == 20
 
 
+@pytest.mark.parametrize(
+    "flags, expected_scan, expected_count",
+    [([], "all", 300), (["--scan", "all"], "all", 300), (["--scan", "shortlist"], "shortlist", 8)],
+)
+def test_cli_scan_coverage_with_configured_scorer(
+    tmp_path, monkeypatch, flags, expected_scan, expected_count
+):
+    monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
+    path = tmp_path / "tickets.jsonl"
+    evidence = "relevant: They charged me again after I cancelled, and support stopped responding."
+    texts = [f"trust issue placeholder {i}" for i in range(299)] + [evidence]
+    path.write_text("\n".join(json.dumps({"text": text}) for text in texts))
+    fake = Fake()
+    code, out, err = run(["losing trust", str(path), "--candidates", "8", "--json", *flags], fake)
+    assert code == 0 and not err
+    result = json.loads(out)
+    evaluated = [text for call in fake.calls for text in call["state"].values()]
+    assert len(evaluated) == expected_count
+    assert result["stats"]["passages_evaluated"] == expected_count
+    assert result["stats"]["scan"] == expected_scan
+    assert result["stats"]["candidates"] <= 8
+    if expected_scan == "all":
+        assert set(evaluated) == set(texts)
+        assert [p["text"] for p in result["items"]] == [evidence]
+    else:
+        assert any("Only shortlisted passages" in warning for warning in result["warnings"])
+
+
 def test_low_budget_fails_before_network(monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "test-key")
     fake = Fake()
@@ -140,6 +168,10 @@ def test_local_mode_does_not_use_configured_key(tmp_path, monkeypatch):
     fake = Fake()
     code, out, err = run(["database", str(path), "--local", "--json"], fake)
     assert code == 0 and json.loads(out)["stats"]["mode"] == "local" and not fake.calls
+    assert json.loads(out)["stats"]["scan"] == "shortlist"
+    code, out, err = run(["database", str(path), "--local", "--scan", "all", "--json"], fake)
+    assert code == 2 and "requires a semantic or custom scorer" in json.loads(out)["error"]["message"]
+    assert not fake.calls
 
 
 def test_flags_can_precede_or_follow_inputs_and_unknown_tokenizer_is_json(tmp_path):

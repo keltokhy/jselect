@@ -43,7 +43,8 @@ def test_invalid_group_keys_are_errors(data):
         select(data, task="test", group_by="thread", mode="local")
 
 
-def test_full_scan_batches_work_and_retains_late_evidence():
+@pytest.mark.parametrize("options", [{}, {"scan": "all"}], ids=["default", "explicit"])
+def test_full_scan_batches_work_and_retains_late_evidence(options):
     calls = []
 
     def scorer(task, passages):
@@ -55,15 +56,18 @@ def test_full_scan_batches_work_and_retains_late_evidence():
         task="look for hidden evidence",
         scorer=scorer,
         candidates=32,
-        scan="all",
+        **options,
     )
     assert len(result.items) == 1 and "899" in result.items[0].text
     assert max(calls) <= 256 and sum(calls) == 900
     assert result.stats["passages_evaluated"] == 900
     assert result.stats["candidates"] <= 32
+    assert result.stats["scan"] == "all"
+    assert result.stats["source_passages_considered"] == 900
 
 
-def test_full_scan_preflight_does_not_spend_part_of_unaffordable_scan(monkeypatch):
+@pytest.mark.parametrize("options", [{}, {"scan": "all"}], ids=["default", "explicit"])
+def test_full_scan_preflight_does_not_spend_part_of_unaffordable_scan(monkeypatch, options):
     monkeypatch.setenv("OPENROUTER_API_KEY", "fixture-key")
 
     def forbidden(request):
@@ -73,10 +77,10 @@ def test_full_scan_preflight_does_not_spend_part_of_unaffordable_scan(monkeypatc
         select(
             (f"long record {i} " * 40 for i in range(1000)),
             task="records",
-            scan="all",
             mode="semantic",
             budget=0.001,
             _transport=httpx.MockTransport(forbidden),
+            **options,
         )
 
 
@@ -87,7 +91,14 @@ def test_rechunking_does_not_exceed_shortlist_bound():
         evaluated.append(len(passages))
         return [1] * len(passages)
 
-    select(["large document. " * 100], task="large document", tokens=100, candidates=2, scorer=scorer)
+    select(
+        ["large document. " * 100],
+        task="large document",
+        tokens=100,
+        candidates=2,
+        scorer=scorer,
+        scan="shortlist",
+    )
     assert max(evaluated) <= 2
 
 

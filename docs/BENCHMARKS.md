@@ -28,8 +28,10 @@ uv run python bench/retrieval.py --queries 30 --seed 1910 --mode semantic \
 | Mean cost per query | $0.004973 |
 
 Both methods pack source excerpts and identical citation headers into the same token budget. BM25 uses
-SQLite's porter/unicode61 FTS5 rank and takes passages in rank order while they fit. jselect uses its
-default candidate diversification, exploration, batched semantic relevance, and final greedy packing.
+SQLite's porter/unicode61 FTS5 rank and takes passages in rank order while they fit. This jselect run used
+shortlist candidate diversification, exploration, batched semantic relevance, and final greedy packing.
+The runner explicitly keeps `scan="shortlist"` to reproduce this protocol. These measurements do not
+describe the current full-scan default.
 Recall is averaged across queries at the **source-document** level. Multiple excerpts from one document
 do not increase recall. A retrieved document may contain a relevant fact outside its selected excerpt;
 this metric alone cannot prove that an agent received every necessary fact.
