@@ -104,7 +104,19 @@ def test_async_scorer_and_async_api():
             select(["text"], task="test")
         return await aselect(["text"], task="test", scorer=scorer)
 
-    assert asyncio.run(run()).items[0].text == "text"
+    result = asyncio.run(run())
+    assert result.items[0].text == "text"
+    assert result.stats["scan"] == "all"
+
+
+@pytest.mark.parametrize("mode", ["auto", "local"])
+def test_local_default_retains_lexical_retrieval(mode):
+    result = select(["database deadlock", "garden flowers"], task="deadlock", mode=mode)
+    assert result.stats["mode"] == "local"
+    assert result.stats["scan"] == "shortlist"
+    assert [p.text for p in result.items] == ["database deadlock"]
+    with pytest.raises(ValueError, match="requires a semantic or custom scorer"):
+        select(["database deadlock"], task="deadlock", mode=mode, scan="all")
 
 
 def test_zero_budget_never_reads_input_or_calls_model():
@@ -124,6 +136,7 @@ def test_zero_budget_never_reads_input_or_calls_model():
         {"diversity": float("nan")},
         {"threshold": 2},
         {"max_items": 0},
+        {"scan": "invalid"},
     ],
 )
 def test_invalid_options(kwargs):

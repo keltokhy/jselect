@@ -8,12 +8,14 @@ No jgrep dependency and no changes to its repository.
 - `jselect "task or question" files... --tokens 8000` and `select(records, task=..., tokens=8000)`.
 - Text, code, logs, JSONL, JSON, CSV, directories, standard input, and Python record iterables.
 - Source-faithful excerpts with stable identifiers, source locations, and exact final-context token accounting.
-- Automatic bounded local retrieval and semantic relevance scoring, followed by selection that penalizes
-  repetition. No manual labels or taxonomy. Existing retrieved passages and custom scorers also work.
+- Full semantic/custom relevance scanning by default, followed by bounded selection that penalizes
+  repetition. Local mode uses lexical retrieval. No manual labels or taxonomy. Existing retrieved
+  passages and custom scorers also work.
 - `--against` excludes exact previous excerpts and discourages similar material on follow-up questions.
 - Local mode requires no credentials or paid requests. Semantic mode uses configured Jev credentials,
   versioned prompts/models, bounded concurrency, retries, persistent caching, and explicit cost accounting.
-- Persisted SQLite indexes make repeated queries cheap. Broad semantic scanning is opt-in and bounded by cost.
+- Persisted SQLite indexes avoid re-indexing for repeated queries. Full semantic scanning is the default
+  and preflighted against the estimated cost budget. Shortlist scanning is an explicit opt-in.
 - JSON output has a stable versioned schema, separate context and metadata, coverage and limitations.
 - Empty evidence is a valid result. Bad data, malformed scores, and provider errors are explicit failures.
 

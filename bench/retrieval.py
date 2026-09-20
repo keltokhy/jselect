@@ -136,6 +136,7 @@ def main():
                     task=task,
                     tokens=args.tokens,
                     mode=args.mode,
+                    scan="shortlist",  # Preserve the published shortlist benchmark's retrieval protocol.
                     candidates=args.candidates,
                     budget=min(0.05, args.budget - spent),
                     cache=not args.no_cache,

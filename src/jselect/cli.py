@@ -95,9 +95,16 @@ def parser_for(command):
     p.add_argument(
         "--local", action="store_const", dest="mode", const="local", help="use local retrieval; no API calls"
     )
-    p.add_argument("--candidates", type=int, default=256, help="maximum passages shortlisted (default: 256)")
     p.add_argument(
-        "--scan", choices=["shortlist", "all"], default="shortlist", help="all scores every unique passage"
+        "--candidates",
+        type=int,
+        default=256,
+        help="maximum passages retained for selection; with --scan shortlist, caps scoring (default: 256)",
+    )
+    p.add_argument(
+        "--scan",
+        choices=["shortlist", "all"],
+        help="all scores every eligible passage (default: all for semantic scoring; shortlist for local)",
     )
     p.add_argument("--against", help="previous --json result or records: seek additional evidence")
     p.add_argument(

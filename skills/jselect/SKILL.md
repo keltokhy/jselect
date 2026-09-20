@@ -38,9 +38,13 @@ the exact field the task needs. Use `inspect INDEX --json` for counts and `show 
 to read an indexed passage identified by `items[].sources[].passage_id`. For a fitted excerpt,
 this retrieves its original parent passage. `index --force` rebuilds a changed snapshot.
 
-The default is a bounded shortlist, not an exhaustive search. Inspect `stats.source_passages_considered`,
-`stats.passages_evaluated`, and warnings before drawing conclusions. `--scan all` broadens semantic
-evaluation; its estimated spending must fit `--budget`. The default budget is $0.05 per invocation.
+Semantic/custom scoring defaults to `--scan all`, evaluating every eligible passage before retaining a
+bounded pool for final selection. Local mode defaults to a lexical shortlist. Inspect
+`stats.source_passages_considered`, `stats.passages_evaluated`, and warnings before drawing conclusions.
+The full semantic scan's estimated spending must fit `--budget` before scoring requests begin; the default
+budget is $0.05 per invocation. An unaffordable scan fails without silently narrowing coverage. Use
+`--scan shortlist` explicitly to trade coverage for less scoring work. `--candidates` caps scoring only in
+shortlist mode; in a full scan it caps the pool retained after scoring.
 An empty result is success, not proof that the phenomenon is absent. Curated examples and occurrence
 counts do not establish prevalence or causality.
 
