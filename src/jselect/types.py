@@ -30,17 +30,19 @@ class Passage:
 
 def merge_passages(passages: list[Passage]) -> list[Passage]:
     """Coalesce identical fitted text while retaining known provenance from each parent."""
-    merged: dict[str, Passage] = {}
+    merged: dict[tuple, Passage] = {}
     for p in passages:
-        if p.text not in merged:
-            merged[p.text] = p
+        # Under --per, the same text in two groups stays two passages with separate counts.
+        key = (p.text, p.sources[0].get("per") if p.sources else None)
+        if key not in merged:
+            merged[key] = p
             continue
-        old = merged[p.text]
+        old = merged[key]
         sources = list(old.sources)
         for ref in p.sources:
             if len(sources) < 5 and ref not in sources:
                 sources.append(ref)
-        merged[p.text] = Passage(
+        merged[key] = Passage(
             old.id,
             old.text,
             sources,
@@ -75,9 +77,13 @@ class Selection:
     stats: dict[str, Any]
     warnings: list[str] = dc_field(default_factory=list)
     schema_version: int = 1
+    # Set by select_per: the field, this context's value, and the value's indexed passage counts.
+    per: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
+        if self.per is None:
+            del data["per"]
         for item in data["items"]:
             if item["draws"] is None:
                 del item["draws"]

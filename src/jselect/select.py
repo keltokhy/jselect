@@ -12,7 +12,7 @@ import time
 from bisect import insort
 from collections import Counter
 from dataclasses import replace
-from itertools import islice
+from itertools import groupby, islice
 from pathlib import Path
 
 from .index import Index, _digest
@@ -52,12 +52,19 @@ def previous_texts(against) -> list[str]:
         return []
     if isinstance(against, Selection):
         return [item.text for item in against.items]
+    if isinstance(against, (list, tuple)) and against and all(isinstance(a, Selection) for a in against):
+        return [item.text for result in against for item in result.items]
     if isinstance(against, (str, Path)):
         path = Path(against)
         if path.suffix.lower() == ".json":
             data = json.loads(path.read_text())
             if isinstance(data, dict) and "items" in data and "schema_version" in data:
                 return [item["text"] for item in data["items"]]
+        if path.suffix.lower() in {".jsonl", ".ndjson"}:
+            # A --per result is one selection per line; ordinary JSONL records fall through.
+            lines = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+            if lines and all(isinstance(d, dict) and "items" in d and "schema_version" in d for d in lines):
+                return [item["text"] for data in lines for item in data["items"]]
         return [rec.text for rec in records(path)]
     if isinstance(against, dict) and "items" in against and "schema_version" in against:
         return [item["text"] for item in against["items"]]
@@ -197,6 +204,16 @@ def _binomial(rng: random.Random, n: int, p: float) -> int:
         count += 1
 
 
+class Pool:
+    """The bounded relevance/diversity pool that greedy packing chooses from."""
+
+    def __init__(self, limit: int):
+        self.limit, self.pool = limit, []
+
+    def extend(self, passages: list[Passage]) -> None:
+        self.pool = Index._spread(self.pool + passages, self.limit)
+
+
 class Draw:
     """A seeded uniform random order over relevant passage occurrences, taken from the front.
 
@@ -213,6 +230,10 @@ class Draw:
         # The smallest key known to lie outside the sample; 1.0 while nothing has been discarded.
         self.bound = 1.0
         self.passages = self.occurrences = 0
+
+    def extend(self, passages: list[Passage]) -> None:
+        for passage in passages:
+            self.add(passage)
 
     def add(self, passage: Passage) -> None:
         self.passages += 1
@@ -319,6 +340,7 @@ async def aselect(
     chunk_size: int = 1800,
     overlap: int = 240,
     _transport=None,
+    _per: str | None = None,
 ) -> Selection:
     """Select evidence. `scorer(task, passages)` may be synchronous or asynchronous.
 
@@ -344,12 +366,15 @@ async def aselect(
         raise ValueError("seed must be an integer")
     if sample and scan == "shortlist":
         raise ValueError("--sample representative draws from every relevant passage; omit --scan shortlist")
+    if _per and scan == "shortlist":
+        raise ValueError("--per scans the collection once for every group; omit --scan shortlist")
     if threshold is not None:
         validate_score(threshold)
     # Validate/initialize tokenizer before any model calls or expensive indexing.
     count_tokens("", encoding)
     if tokens == 0:
-        return Selection(task, "", [], 0, tokens, encoding, {"mode": mode, "calls": 0, "cost": 0.0})
+        empty = Selection(task, "", [], 0, tokens, encoding, {"mode": mode, "calls": 0, "cost": 0.0})
+        return [] if _per else empty
     backend = None if mode == "local" or scorer else resolve_backend(api, model)
     if mode == "semantic" and not backend and not scorer:
         raise ValueError(
@@ -357,8 +382,8 @@ async def aselect(
         )
     mode = "custom" if scorer else "semantic" if backend else "local"
     if scan is None:
-        scan = "shortlist" if mode == "local" and not sample else "all"
-    if scan == "all" and mode == "local" and not sample:
+        scan = "shortlist" if mode == "local" and not (sample or _per) else "all"
+    if scan == "all" and mode == "local" and not (sample or _per):
         raise ValueError("--scan all requires a semantic or custom scorer; local mode uses the lexical index")
     if threshold is None:
         threshold = 0.0 if mode == "local" else 0.5 if sample else 0.25
@@ -367,13 +392,17 @@ async def aselect(
         index = Index(data)
     else:
         index = (
-            Index.build(data, field=field, group_by=group_by, chunk_size=chunk_size, overlap=overlap)
+            Index.build(
+                data, field=field, group_by=group_by, per=_per, chunk_size=chunk_size, overlap=overlap
+            )
             if own_index
             else data
         )
     judge = None
     warnings = []
     try:
+        if _per and index.stats.get("per") != _per:
+            raise ValueError(f"index was not built with --per {_per}; rebuild it with index ... --per {_per}")
         judge = (
             JevScorer(
                 backend,
@@ -419,29 +448,41 @@ async def aselect(
             return [validate_score(s) for s in scores]
 
         source_considered, scored_count, scoring_seconds = 0, 0, 0.0
-        draw = Draw(tokens=tokens, encoding=encoding, seed=seed, max_items=max_items) if sample else None
+        # One collector per output context: a single one, or one for each --per value.
+        parts = index.per_values() if _per else {None: {}}
+        groups = {
+            value: Draw(tokens=tokens, encoding=encoding, seed=seed, max_items=max_items)
+            if sample
+            else Pool(candidates)
+            for value in parts
+        }
         if scan == "all":
+
+            def runs():
+                # A local population is every lexical match, not the diversified shortlist.
+                found = index.matches(task, per=bool(_per)) if mode == "local" else index.all(per=bool(_per))
+                # Adjacent passages with equal text, one for each --per value, share a single score.
+                return (list(run) for _, run in groupby(fitted(found), key=lambda p: p.text))
+
             if judge:
-                judge.preflight(task, fitted(index.all()))
-            passages = []
-            # A local population is every lexical match, not the diversified shortlist.
-            stream = iter(fitted(index.matches(task) if mode == "local" else index.all()))
+                judge.preflight(task, (run[0] for run in runs()))
+            stream = runs()
             while block := list(islice(stream, 256)):
+                # Excerpts subdivided for different --per values can repeat without being adjacent.
+                unique = list({run[0].text: run[0] for run in block}.values())
                 t0 = time.perf_counter()
-                block_scores = await score_batch(block)
+                block_scores = dict(zip((p.text for p in unique), await score_batch(unique), strict=True))
                 scoring_seconds += time.perf_counter() - t0
-                scored_count += len(block)
-                eligible = [
-                    replace(p, retrieval_score=s)
-                    for p, s in zip(block, block_scores, strict=True)
-                    if s >= threshold and s > 0
-                ]
-                if draw:
-                    for p in eligible:
-                        draw.add(p)
-                else:
-                    passages = Index._spread(passages + eligible, candidates)
-            scores = [p.retrieval_score for p in passages]
+                scored_count += len(unique)
+                eligible = {}
+                for run in block:
+                    s = block_scores[run[0].text]
+                    if s >= threshold and s > 0:
+                        for p in run:
+                            value = p.sources[0]["per"] if _per else None
+                            eligible.setdefault(value, []).append(replace(p, retrieval_score=s))
+                for value, found in eligible.items():
+                    groups[value].extend(found)
             source_considered = index.stats["unique_passages"]
         else:
             pool = index.candidates(
@@ -459,74 +500,88 @@ async def aselect(
             scores = await score_batch(passages)
             scoring_seconds = time.perf_counter() - t0
             scored_count = len(passages)
+            groups[None].pool = [replace(p, retrieval_score=s) for p, s in zip(passages, scores, strict=True)]
         retrieved = time.perf_counter()
         if mode == "local":
             warnings.append(
                 "Local mode samples passages that share a task term; no semantic model judged relevance."
-                if draw
+                if sample
                 else "Local mode uses lexical relevance and text diversity; no semantic model was called."
             )
-        scored = time.perf_counter()
-        if draw:
-            items, sampling = draw.finish(
-                f"{mode} relevance at or above {threshold:g}; seeded random draw of passage occurrences, "
-                "without replacement"
-            )
-        else:
-            items = pack(
-                passages,
-                scores,
-                tokens=tokens,
-                encoding=encoding,
-                diversity=diversity,
-                threshold=threshold,
-                previous=prior,
-                max_items=max_items,
-                mode=mode,
-            )
-        context = render(items)
         if scan != "all" and source_considered < index.stats["unique_passages"]:
             warnings.append(
                 "Only shortlisted passages were scored; relevant evidence may exist outside the shortlist."
             )
-        if not items:
-            warnings.append("No new passage met the relevance threshold and fit the token budget.")
-        stats = {
-            **index.stats,
-            "mode": mode,
-            "scan": scan,
-            "candidate_limit": candidates,
-            "candidates": len(passages),
-            "source_passages_considered": source_considered,
-            "passages_evaluated": scored_count,
-            "selected": len(items),
-            "previous_passages": len(prior),
-            "calls": 0,
-            "cost": 0.0,
-            "index_seconds": indexed - started if own_index else 0.0,
-            "retrieval_seconds": retrieved - retrieval_start - scoring_seconds,
-            "scoring_seconds": scoring_seconds,
-            "selection_seconds": time.perf_counter() - scored,
-            "seconds": time.perf_counter() - started,
-            "selection_method": "greedy_relevance_novelty_per_token",
-            "diversity": diversity,
-            "threshold": threshold,
-        }
-        if draw:
-            # Every relevant passage is a candidate for the draw; no pool cap or novelty applies.
-            del stats["candidate_limit"], stats["diversity"]
-            stats.update(
-                candidates=draw.passages,
-                selection_method="random_occurrence_sample_without_replacement",
-                sample=sample,
-                seed=seed,
-                **sampling,
+        results = []
+        for value, group in groups.items():
+            scored = time.perf_counter()
+            if sample:
+                items, sampling = group.finish(
+                    f"{mode} relevance at or above {threshold:g}; seeded random draw of passage "
+                    "occurrences, without replacement"
+                )
+            else:
+                items = pack(
+                    group.pool,
+                    [p.retrieval_score for p in group.pool],
+                    tokens=tokens,
+                    encoding=encoding,
+                    diversity=diversity,
+                    threshold=threshold,
+                    previous=prior,
+                    max_items=max_items,
+                    mode=mode,
+                )
+            context = render(items)
+            notes = list(warnings)
+            if not items:
+                notes.append("No new passage met the relevance threshold and fit the token budget.")
+            stats = {
+                **index.stats,
+                "mode": mode,
+                "scan": scan,
+                "candidate_limit": candidates,
+                "candidates": group.passages if sample else len(group.pool),
+                "source_passages_considered": source_considered,
+                "passages_evaluated": scored_count,
+                "selected": len(items),
+                "previous_passages": len(prior),
+                "calls": 0,
+                "cost": 0.0,
+                "index_seconds": indexed - started if own_index else 0.0,
+                "retrieval_seconds": retrieved - retrieval_start - scoring_seconds,
+                "scoring_seconds": scoring_seconds,
+                "selection_seconds": time.perf_counter() - scored,
+                "seconds": time.perf_counter() - started,
+                "selection_method": "greedy_relevance_novelty_per_token",
+                "diversity": diversity,
+                "threshold": threshold,
+            }
+            if sample:
+                # Every relevant passage is a candidate for the draw; no pool cap or novelty applies.
+                del stats["candidate_limit"], stats["diversity"]
+                stats.update(
+                    selection_method="random_occurrence_sample_without_replacement",
+                    sample=sample,
+                    seed=seed,
+                    **sampling,
+                )
+            if judge:
+                stats.update(judge.stats)
+            results.append(
+                Selection(
+                    task,
+                    context,
+                    items,
+                    count_tokens(context, encoding),
+                    tokens,
+                    encoding,
+                    stats,
+                    notes,
+                    per={"field": _per, "value": value, **parts[value]} if _per else None,
+                )
             )
-        if judge:
-            stats.update(judge.stats)
-        return Selection(
-            task, context, items, count_tokens(context, encoding), tokens, encoding, stats, warnings
-        )
+        return results if _per else results[0]
     except SemanticError as exc:
         if judge:
             exc.stats = dict(judge.stats)
@@ -538,10 +593,31 @@ async def aselect(
             index.close()
 
 
-def select(data, *, task: str, tokens: int = 8000, **options) -> Selection:
-    """Synchronous entry point. In an async app or notebook, use `await aselect(...)`."""
+async def aselect_per(data, *, task: str, per: str, tokens: int = 8000, **options) -> list[Selection]:
+    """One context for each value of the `per` field, in order of first appearance.
+
+    The collection is scanned and scored once; selection then runs separately for each value with
+    its own `tokens` budget. Other options are those of `aselect`. A saved or reused index must
+    have been built with the same `per` field. Each result's `per` names its value.
+    """
+    if not isinstance(per, str) or not per:
+        raise ValueError("per must name a record field")
+    return await aselect(data, task=task, tokens=tokens, _per=per, **options)
+
+
+def _blocking(call, name: str):
     try:
         asyncio.get_running_loop()
     except RuntimeError:
-        return asyncio.run(aselect(data, task=task, tokens=tokens, **options))
-    raise RuntimeError("select() cannot run inside an event loop; use await aselect(...)")
+        return asyncio.run(call())
+    raise RuntimeError(f"{name}() cannot run inside an event loop; use await a{name}(...)")
+
+
+def select(data, *, task: str, tokens: int = 8000, **options) -> Selection:
+    """Synchronous entry point. In an async app or notebook, use `await aselect(...)`."""
+    return _blocking(lambda: aselect(data, task=task, tokens=tokens, **options), "select")
+
+
+def select_per(data, *, task: str, per: str, tokens: int = 8000, **options) -> list[Selection]:
+    """Synchronous `aselect_per`: one context for each value of the `per` field."""
+    return _blocking(lambda: aselect_per(data, task=task, per=per, tokens=tokens, **options), "select_per")

@@ -45,6 +45,7 @@ class Index:
         path: str | Path | None = None,
         field: str | None = None,
         group_by: str | None = None,
+        per: str | None = None,
         chunk_size: int = 1800,
         overlap: int = 240,
         force: bool = False,
@@ -82,8 +83,17 @@ class Index:
                 PRAGMA synchronous=OFF;
                 PRAGMA cache_size=-16000;
             """)
+            if per:
+                # Identical text is still stored once; each --per value keeps its own count and sources.
+                db.execute(
+                    "CREATE TABLE partitions (passage INTEGER NOT NULL, value TEXT NOT NULL, "
+                    "occurrences INTEGER NOT NULL, sources TEXT NOT NULL, PRIMARY KEY (passage, value))"
+                )
+                counts["per"] = per
             db.execute("BEGIN")
-            for rec in records(data, field=field, group_by=group_by):
+            for rec in records(data, field=field, group_by=group_by, per=per):
+                if per and "per" not in rec.metadata:
+                    raise ValueError(f"{rec.source}:{rec.line}: Record metadata needs per for --per")
                 counts["records"] += 1
                 counts["characters"] += len(rec.text)
                 if not rec.text.strip():
@@ -128,18 +138,36 @@ class Index:
                             "UPDATE passages SET occurrences=occurrences+1, sources=? WHERE id=?",
                             (json.dumps(sources, ensure_ascii=False), old[0]),
                         )
+                        passage = old[0]
                     else:
-                        db.execute(
+                        passage = db.execute(
                             "INSERT INTO passages(key,text,sources) VALUES(?,?,?)",
                             (key, text, json.dumps([ref], ensure_ascii=False)),
-                        )
+                        ).lastrowid
                         counts["unique_passages"] += 1
                     counts["passages"] += 1
+                    if per:
+                        part = (passage, rec.metadata["per"])
+                        old = db.execute(
+                            "SELECT sources FROM partitions WHERE passage=? AND value=?", part
+                        ).fetchone()
+                        sources = json.loads(old[0]) if old else []
+                        if len(sources) < 5 and ref not in sources:
+                            sources.append(ref)
+                        db.execute(
+                            "INSERT INTO partitions VALUES(?,?,1,?) ON CONFLICT(passage, value) "
+                            "DO UPDATE SET occurrences=occurrences+1, sources=excluded.sources",
+                            (*part, json.dumps(sources, ensure_ascii=False)),
+                        )
             db.execute(
                 "CREATE VIRTUAL TABLE search USING fts5(text, content=passages, content_rowid=id, "
                 "tokenize='porter unicode61')"
             )
             db.execute("INSERT INTO search(search) VALUES('rebuild')")
+            if per:
+                counts["per_values"] = db.execute("SELECT COUNT(DISTINCT value) FROM partitions").fetchone()[
+                    0
+                ]
             db.execute("INSERT INTO meta VALUES ('stats', ?)", (json.dumps(counts),))
             db.commit()
             db.close()
@@ -177,9 +205,28 @@ class Index:
             )
         return self._passage(row)
 
-    def all(self):
-        for row in self.db.execute("SELECT * FROM passages ORDER BY id"):
+    @staticmethod
+    def _scan(source: str, order: str, per: bool, *, first: str = "", where: str = "") -> str:
+        columns, join = "p.*", ""
+        if per:
+            # A passage comes once per --per value, adjacent, with that value's count and sources.
+            columns, join = "p.key, p.text, t.sources, t.occurrences", " JOIN partitions t ON t.passage=p.id"
+            order += ", t.value"
+        return f"SELECT {first}{columns} FROM {source}{join}{where} ORDER BY {order}"
+
+    def all(self, *, per: bool = False):
+        for row in self.db.execute(self._scan("passages p", "p.id", per)):
             yield self._passage(row)
+
+    def per_values(self) -> dict[str, dict[str, int]]:
+        """Each --per value in order of first appearance, with its distinct passages and occurrences."""
+        rows = self.db.execute(
+            "SELECT value, COUNT(*) AS passages, SUM(occurrences) AS occurrences FROM partitions "
+            "GROUP BY value ORDER BY MIN(passage), value"
+        )
+        return {
+            row["value"]: {"passages": row["passages"], "occurrences": row["occurrences"]} for row in rows
+        }
 
     @staticmethod
     def _expression(task: str) -> str:
@@ -188,19 +235,20 @@ class Index:
             terms = [w for w in task.split() if w.strip()][:64]
         return " OR ".join('"' + t.replace('"', '""') + '"' for t in terms)
 
-    def matches(self, task: str):
+    def matches(self, task: str, *, per: bool = False):
         """Every passage sharing a task term, best first, with no shortlist: the local sampling population."""
         expression = self._expression(task)
+        if not expression:
+            return
+        query = self._scan(
+            "search JOIN passages p ON p.id=search.rowid",
+            "rank, p.id",
+            per,
+            first="bm25(search) AS rank, ",
+            where=" WHERE search MATCH ?",
+        )
         best = None
-        for row in (
-            self.db.execute(
-                "SELECT p.*, bm25(search) AS rank FROM search JOIN passages p ON p.id=search.rowid "
-                "WHERE search MATCH ? ORDER BY rank, p.id",
-                (expression,),
-            )
-            if expression
-            else []
-        ):
+        for row in self.db.execute(query, (expression,)):
             best = -row["rank"] if best is None else best
             yield self._passage(row, max(0.0, -row["rank"] / best))
 
@@ -273,3 +321,10 @@ class Index:
         from .select import select
 
         return select(self, task=task, tokens=tokens, **options)
+
+    def select_per(self, *, task: str, tokens: int = 8000, **options):
+        from .select import select_per
+
+        if "per" not in self.stats:
+            raise ValueError("index was not built with --per; rebuild it with Index.build(..., per=FIELD)")
+        return select_per(self, task=task, per=self.stats["per"], tokens=tokens, **options)

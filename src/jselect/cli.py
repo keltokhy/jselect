@@ -13,7 +13,7 @@ from . import __version__
 from .index import Index
 from .inputs import read_paths
 from .judge import SemanticError, resolve_backend
-from .select import select
+from .select import select, select_per
 
 
 class Parser(argparse.ArgumentParser):
@@ -28,6 +28,11 @@ def inputs(parser):
     parser.add_argument("--field", help="text field or dotted path; auto-detected for common JSON/CSV fields")
     parser.add_argument(
         "--group-by", help="combine rows by this field, e.g. conversation_id (in input order)"
+    )
+    parser.add_argument(
+        "--per",
+        metavar="FIELD",
+        help="one context per value of this field, e.g. company_year; needs --json (one object per line)",
     )
     parser.add_argument(
         "--format",
@@ -53,6 +58,7 @@ def source(args):
         glob=args.glob,
         exclude=args.exclude,
         group_by=args.group_by,
+        per=args.per,
     )
 
 
@@ -187,6 +193,7 @@ def main(argv=None, *, out=None, err=None, transport=None) -> int:
             with Index.build(
                 source(args),
                 path=args.output,
+                per=args.per,
                 chunk_size=args.chunk_size,
                 overlap=args.overlap,
                 force=args.force,
@@ -213,12 +220,15 @@ def main(argv=None, *, out=None, err=None, transport=None) -> int:
                 file=out,
             )
             return 0
+        if args.per and not args.json:
+            raise ValueError("--per writes one JSON object per line; add --json")
         index = None
         if len(args.paths) == 1 and Path(args.paths[0]).suffix == ".jselect":
             index = Index(args.paths[0])
         try:
-            result = select(
+            result = (select_per if args.per else select)(
                 index or source(args),
+                **({"per": args.per} if args.per else {}),
                 task=args.task,
                 tokens=args.tokens,
                 encoding=args.encoding,
@@ -245,12 +255,24 @@ def main(argv=None, *, out=None, err=None, transport=None) -> int:
         finally:
             if index:
                 index.close()
-        output = json.dumps(result.to_dict(), ensure_ascii=False) + "\n" if args.json else result.context
+        if args.per:
+            output = "".join(json.dumps(r.to_dict(), ensure_ascii=False) + "\n" for r in result)
+        else:
+            output = json.dumps(result.to_dict(), ensure_ascii=False) + "\n" if args.json else result.context
         if args.output:
             Path(args.output).write_text(output, encoding="utf-8")
         else:
             out.write(output)
-        if args.stats:
+        if args.stats and args.per:
+            # Scan work is shared, so every line reports the same calls and cost; do not sum them.
+            stats = result[-1].stats if result else {}
+            print(
+                f"jselect: {len(result)} contexts, one per {args.per}; "
+                f"{sum(len(r.items) for r in result)} passages; {stats.get('mode')}; "
+                f"{stats.get('calls', 0)} calls; ${stats.get('cost', 0):.6f}; {stats.get('seconds', 0):.3f}s",
+                file=err,
+            )
+        elif args.stats:
             stats = result.stats
             print(
                 f"jselect: {len(result.items)} passages, {result.tokens}/{result.token_budget} tokens; "
