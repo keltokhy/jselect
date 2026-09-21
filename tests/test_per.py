@@ -178,7 +178,8 @@ def test_async_entry_point_and_zero_budget():
         return await aselect_per(rows(), scorer=Scorer(), **OPTIONS)
 
     assert len(asyncio.run(run())) == 4
-    assert select_per(rows(), scorer=Scorer(), **{**OPTIONS, "tokens": 0}) == []
+    empty = select_per(rows(), scorer=Scorer(), **{**OPTIONS, "tokens": 0})
+    assert len(empty) == 4 and all(r.context == "" and r.stats["calls"] == 0 for r in empty)
 
 
 def run(argv, fake=None):

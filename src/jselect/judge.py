@@ -89,6 +89,7 @@ class JevScorer:
         cache: bool = True,
         cache_path: str | Path | None = None,
         transport=None,
+        full_population: bool = False,
     ):
         if not math.isfinite(budget) or budget <= 0:
             raise ValueError("budget must be a positive, finite dollar amount")
@@ -97,6 +98,7 @@ class JevScorer:
         self.backend, self.budget = backend, budget
         self.concurrency, self.batch_size, self.timeout = concurrency, batch_size, timeout
         self.transport = transport
+        self.full_population = full_population
         self.stats = {
             "calls": 0,
             "cached_passages": 0,
@@ -197,9 +199,14 @@ class JevScorer:
 
     def check_budget(self, estimate):
         if estimate + self.stats["cost"] > self.budget:
+            advice = (
+                "use a smaller collection or raise --budget"
+                if self.full_population
+                else "reduce --candidates, use a shortlist, or raise --budget"
+            )
             raise SemanticError(
                 f"estimated semantic spend ${estimate + self.stats['cost']:.4f} exceeds "
-                f"budget ${self.budget:.4f}; reduce --candidates, use a shortlist, or raise --budget"
+                f"budget ${self.budget:.4f}; {advice}"
             )
 
     async def score(self, task: str, passages: list[Passage]) -> list[float]:

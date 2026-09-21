@@ -22,7 +22,7 @@ from .text import chunks, count_tokens, features, similarity, words
 from .types import PER, Evidence, Passage, Selection, merge_passages
 
 
-def render_item(item: Evidence | Passage, number: int) -> str:
+def render_item(item: Evidence | Passage, number: int, *, sample: bool = False) -> str:
     ref = item.sources[0]
     location = {
         "source": ref["source"],
@@ -38,13 +38,24 @@ def render_item(item: Evidence | Passage, number: int) -> str:
         location["group_by"] = ref["group_by"]
         location["group_id"] = ref["group_id"]
         location["rows"] = [{"source": m["source"], "line": m["line"]} for m in ref.get("members", [])]
-    if (getattr(item, "draws", None) or 1) > 1:
-        location["draws"] = item.draws
+    if sample:
+        # A content-only citation makes fitting and the draw independent of source locations.
+        location = {"passage": item.id}
+    draws = getattr(item, "draws", item.occurrences if sample else None)
+    if (draws or 1) > 1:
+        location["draws"] = draws
     return f"[{number}] {json.dumps(location, ensure_ascii=False, separators=(',', ':'))}\n{item.text}"
 
 
-def render(items) -> str:
-    return "\n\n".join(render_item(item, i + 1) for i, item in enumerate(items))
+def render(items, *, sample: bool = False) -> str:
+    return "\n\n".join(render_item(item, i + 1, sample=sample) for i, item in enumerate(items))
+
+
+def render_sample(items, encoding: str) -> str:
+    """Keep location citations when they fit within the content-only citation allowance."""
+    canonical = render(items, sample=True)
+    located = render(items)
+    return located if count_tokens(located, encoding) <= count_tokens(canonical, encoding) else canonical
 
 
 def previous_texts(against) -> list[str]:
@@ -72,7 +83,14 @@ def previous_texts(against) -> list[str]:
 
 
 def fit_passages(
-    passages: list[Passage], *, tokens: int, encoding: str, task: str, local: bool = False, apart=None
+    passages: list[Passage],
+    *,
+    tokens: int,
+    encoding: str,
+    task: str,
+    local: bool = False,
+    apart=None,
+    sample: bool = False,
 ) -> list[Passage]:
     """Rechunk oversized candidates before judging, so scores describe exactly the returned evidence.
 
@@ -82,10 +100,11 @@ def fit_passages(
     result = []
     query = set(words(task))
     for p in passages:
-        if count_tokens(render_item(p, 1), encoding) <= tokens:
+        if count_tokens(render_item(p, 1, sample=sample), encoding) <= tokens:
             result.append(p)
             continue
-        overhead = count_tokens(render_item(Passage(p.id, "", p.sources), 1), encoding)
+        empty = replace(p, text="") if sample else Passage(p.id, "", p.sources)
+        overhead = count_tokens(render_item(empty, 1, sample=sample), encoding)
         allowance = tokens - overhead - 8
         if allowance < 16:
             continue
@@ -109,11 +128,35 @@ def fit_passages(
             if local:
                 score *= len(query & set(words(text))) / max(len(query), 1)
             part = Passage(_digest(text), text, refs, p.occurrences, score)
-            if count_tokens(render_item(part, 1), encoding) <= tokens:
+            if count_tokens(render_item(part, 1, sample=sample), encoding) <= tokens:
                 result.append(part)
             elif len(part.text) < len(p.text) and len(part.text) > 8:
-                result.extend(fit_passages([part], tokens=tokens, encoding=encoding, task=task, local=local))
-    return merge_passages(result, apart=apart)
+                result.extend(
+                    fit_passages(
+                        [part], tokens=tokens, encoding=encoding, task=task, local=local, sample=sample
+                    )
+                )
+    merged = merge_passages(result, apart=apart)
+    if sample:
+        # Equal fragments within a parent can raise the reserved count after splitting.
+        fitted = []
+        for p in merged:
+            if count_tokens(render_item(p, 1, sample=True), encoding) <= tokens:
+                fitted.append(p)
+            else:
+                fitted.extend(
+                    fit_passages(
+                        [p],
+                        tokens=tokens,
+                        encoding=encoding,
+                        task=task,
+                        local=local,
+                        apart=apart,
+                        sample=True,
+                    )
+                )
+        return merge_passages(fitted, apart=apart)
+    return merged
 
 
 def pack(
@@ -263,7 +306,7 @@ class Draw:
         key = -math.expm1(math.log1p(-_uniform(*salt)) / passage.occurrences)
         if key >= self.bound:
             return
-        cost = held[2] if held else count_tokens(render_item(passage, 1), self.encoding)
+        cost = held[2] if held else count_tokens(render_item(passage, 1, sample=True), self.encoding)
         insort(self.head, (key, salt))
         self.units[salt] = (key, passage, cost)
         spent, texts = 0, set()
@@ -291,19 +334,22 @@ class Draw:
             passage = merge_passages([entry[0], p])[0] if entry else p
             trial = {**chosen, p.text: [passage, [*(entry[1] if entry else []), (key, p.occurrences, salt)]]}
             # Reserve the widest possible draw count so the final header cannot outgrow the budget.
-            if count_tokens(render(self._items(trial, None, reason)), self.encoding) > self.tokens:
+            if (
+                count_tokens(render(self._items(trial, None, reason), sample=True), self.encoding)
+                > self.tokens
+            ):
                 cutoff, stop = key, "budget"
                 break
             chosen = trial
         while True:
             items = self._items(chosen, cutoff, reason)
-            if count_tokens(render(items), self.encoding) <= self.tokens:
+            if count_tokens(render(items, sample=True), self.encoding) <= self.tokens:
                 break
             # A tokenizer may charge more for a shorter header; end the draw one passage earlier.
             _, (_, parts) = chosen.popitem()
             cutoff, stop = min(key for key, _, _ in parts), "budget"
         if not items and self.passages:
-            # Every fitted passage fits alone, so only the reserved draw count can block the first one.
+            # Counts can grow when equal fragments from different parents meet in the draw.
             self.note = (
                 "The first passage drawn fits the token budget only without the room reserved for its draw "
                 "count, and the draw never skips ahead, so the sample is empty. Raise --tokens slightly."
@@ -401,11 +447,11 @@ async def aselect(
         validate_score(threshold)
     # Validate/initialize tokenizer before any model calls or expensive indexing.
     count_tokens("", encoding)
-    if tokens == 0:
+    if tokens == 0 and not _per:
         empty = Selection(task, "", [], 0, tokens, encoding, {"mode": mode, "calls": 0, "cost": 0.0})
-        return [] if _per else empty
-    backend = None if mode == "local" or scorer else resolve_backend(api, model)
-    if mode == "semantic" and not backend and not scorer:
+        return empty
+    backend = None if tokens == 0 or mode == "local" or scorer else resolve_backend(api, model)
+    if tokens and mode == "semantic" and not backend and not scorer:
         raise ValueError(
             "semantic mode needs TYPESAFE_API_KEY or OPENROUTER_API_KEY; use --mode local offline"
         )
@@ -432,6 +478,21 @@ async def aselect(
     try:
         if _per and index.stats.get("per") != _per:
             raise ValueError(f"index was not built with --per {_per}; rebuild it with index ... --per {_per}")
+        if tokens == 0:
+            return [
+                Selection(
+                    task,
+                    "",
+                    [],
+                    0,
+                    tokens,
+                    encoding,
+                    {**index.stats, "mode": mode, "calls": 0, "cost": 0.0, "passages_evaluated": 0},
+                    ["The token budget is zero; no passages were scored."],
+                    per={"field": _per, "value": value, **counts},
+                )
+                for value, counts in index.per_values().items()
+            ]
         judge = (
             JevScorer(
                 backend,
@@ -441,6 +502,7 @@ async def aselect(
                 timeout=timeout,
                 cache=cache,
                 transport=_transport,
+                full_population=bool(sample or _per),
             )
             if backend
             else None
@@ -468,6 +530,7 @@ async def aselect(
                         task=task,
                         local=mode == "local",
                         apart=apart if _per or sample else None,
+                        sample=bool(sample),
                     )
                     if p.text not in prior_set
                 )
@@ -598,7 +661,7 @@ async def aselect(
                     max_items=max_items,
                     mode=mode,
                 )
-            context = render(items)
+            context = render_sample(items, encoding) if sample else render(items)
             notes = list(warnings)
             if not items:
                 notes.append(

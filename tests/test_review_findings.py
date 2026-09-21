@@ -210,10 +210,16 @@ def test_threshold_zero_is_inclusive_except_for_the_local_term_match():
 def test_an_empty_sample_says_when_the_reserved_repeat_count_is_the_reason():
     text = "A" + "x" * 10
     ref = {"source": "toy", "line": 1, "record_id": "A", "start": 0, "end": len(text), "passage_id": "A"}
-    bare = count_tokens(module.render([Passage("A", text, [ref], 3, 0.9)]), "bytes")
-    rows = [Record(text, id="A", source="toy")] * 3
-    tight = select(rows, task="x", scorer=high, tokens=bare, encoding="bytes", sample="representative")
-    assert tight.items == [] and tight.stats["population_occurrences"] == 3
-    assert any("room reserved for its draw count" in warning for warning in tight.warnings)
-    roomy = select(rows, task="x", scorer=high, tokens=bare + 10, encoding="bytes", sample="representative")
-    assert roomy.items[0].draws == 3 and not roomy.warnings
+    passage = Passage("A", text, [ref], 3, 0.9)
+    # Fitting now reserves draws first. The collector still diagnoses unfitted input or a reserve
+    # that grows when equal fragments from different parents are combined.
+    bare = count_tokens(module.render([Passage("A", text, [ref])], sample=True), "bytes")
+    tight = Draw(tokens=bare, encoding="bytes", seed=0)
+    tight.add(passage)
+    items, stats = tight.finish("rule")
+    assert items == [] and stats["population_occurrences"] == 3
+    assert "room reserved for its draw count" in tight.note
+    roomy = Draw(tokens=bare + 10, encoding="bytes", seed=0)
+    roomy.add(passage)
+    items, _ = roomy.finish("rule")
+    assert items[0].draws == 3 and roomy.note is None

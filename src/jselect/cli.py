@@ -127,7 +127,7 @@ def parser_for(command):
         choices=["representative"],
         help="draw relevant passages at random instead of favoring the most relevant and novel",
     )
-    p.add_argument("--seed", type=int, default=0, help="random seed for --sample (default: 0)")
+    p.add_argument("--seed", type=int, help="random seed for --sample (default: 0)")
     p.add_argument("--api", choices=["typesafe", "openrouter", "gateway"])
     p.add_argument("--model", help="override the pinned Jev model")
     p.add_argument(
@@ -222,6 +222,8 @@ def main(argv=None, *, out=None, err=None, transport=None) -> int:
             return 0
         if args.per and not args.json:
             raise ValueError("--per writes one JSON object per line; add --json")
+        if args.seed is not None and not args.sample:
+            raise ValueError("--seed requires --sample representative")
         index = None
         if len(args.paths) == 1 and Path(args.paths[0]).suffix == ".jselect":
             index = Index(args.paths[0])
@@ -240,7 +242,7 @@ def main(argv=None, *, out=None, err=None, transport=None) -> int:
                 max_items=args.max_items,
                 against=args.against,
                 sample=args.sample,
-                seed=args.seed,
+                seed=args.seed if args.seed is not None else 0,
                 api=args.api,
                 model=args.model,
                 budget=args.budget,
@@ -281,16 +283,18 @@ def main(argv=None, *, out=None, err=None, transport=None) -> int:
                 file=err,
             )
             if stats.get("sample"):
+                population = "keyword-matching" if stats["mode"] == "local" else "relevant"
                 print(
                     f"jselect: {stats['sample']} sample: {stats['sample_occurrences']} of "
-                    f"{stats['population_occurrences']} relevant occurrences "
+                    f"{stats['population_occurrences']} {population} occurrences "
                     f"({stats['sample_passages']} of {stats['population_passages']} passages); "
                     f"threshold {stats['threshold']:g}; seed {stats['seed']}; random without replacement; "
                     f"ended by {stats['sample_stop']}",
                     file=err,
                 )
-        if not args.json:
-            for warning in result.warnings:
+        if not args.json or args.sample or args.per:
+            warnings = dict.fromkeys(w for r in (result if args.per else [result]) for w in r.warnings)
+            for warning in warnings:
                 print(f"jselect: {warning}", file=err)
         return 0
     except BrokenPipeError:
