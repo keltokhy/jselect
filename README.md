@@ -122,8 +122,13 @@ complaints shows how bad the worst of them are, not what is typical. `--sample r
 the selection rule with a random draw:
 
 ```bash
-jselect "Complaints about account access" complaints.jsonl --sample representative --seed 7 --tokens 4000 --stats
+jselect "Complaints about account access" complaints.jsonl --mode semantic \
+  --sample representative --seed 7 --tokens 4000 --json --stats
 ```
+
+Use `--mode semantic` for a relevance-defined population: missing credentials or a failed scorer
+produce an error. The default `--mode auto` uses local matching when no key is configured; warnings
+reach stderr even with `--json`. `--seed` without `--sample` is a usage error.
 
 1. The population is every passage judged relevant: relevance at or above `--threshold`, inclusive,
    which defaults to 0.5 in this mode. The scan is always complete, so `--scan shortlist` is refused;
@@ -135,9 +140,12 @@ jselect "Complaints about account access" complaints.jsonl --sample representati
 3. The draw ends at the first passage that does not fit the remaining token budget, at `-n` passages,
    or when the population runs out. Nothing is skipped to make room, because filling the gap with
    whatever fits would favor short passages. "Fits" is checked with room reserved for the largest
-   draw count each repeated text could show, not the count it ends up with, so a draw can end a few
-   tokens early. Items keep the order of the draw, which carries no ranking. Novelty, `--diversity`,
-   and `--candidates` play no part.
+   draw count each repeated text could show, not the count it ends up with. Fitting reserves that
+   count before scoring. Citation costs use content-ID headers so filenames and source positions
+   cannot move the stopping point. The output uses location citations if they fit within that
+   allowance, otherwise `{"passage":"SHA-256"}` headers; JSON `items[].sources` retains the locations.
+   These reserves can leave unused tokens. Items keep the order of the draw, which carries no ranking.
+   Novelty, `--diversity`, and `--candidates` play no part.
 
 `--stats` adds a line for a methods section, and the same numbers are in the JSON `stats`:
 
@@ -156,23 +164,42 @@ What the sample does and does not support:
   overlapping passages and so has more chances than a short one.
 - The passage that ends the draw is left out, and it is more often a long one. Long passages are
   therefore somewhat under-represented, more so when one passage takes a large share of the budget.
-  To avoid this, fix the sample size with `-n` and give `--tokens` enough room that
+  To avoid this stopping effect, cap displayed texts with `-n` and give `--tokens` enough room that
   `stats.sample_stop` is `max_items` rather than `budget`.
 - Further draws of a text already in the context add almost no tokens and never end the draw, so a
   heavily repeated text is drawn slightly more often than its share of occurrences.
-- The reserved draw count makes a repeated text cost a few tokens more than it finally uses. With a
-  budget that barely holds one passage, that reserve alone can leave the sample empty; the result then
-  carries a warning that says so. Give `--tokens` room for several passages when measuring.
+- The reserved draw count makes a repeated text cost more than it finally uses. Oversized passages
+  are split with this reserve included. Any remaining empty draw caused by the reserve carries a
+  specific warning. Give `--tokens` room for several passages when measuring.
 - "Relevant" is the scorer's judgment at the threshold; scoring errors move the population. With
   `--local` no model judges relevance: the population is every passage sharing at least one task term
   after stop-word removal and stemming, and `--threshold` (default 0) applies to the normalized
   lexical score on top of that match. Report that as a keyword match.
-- The same index, task, budget, encoding, threshold, and seed give the same sample. A passage's place
-  in the order depends on the seed and its content, not on record IDs or on how the scan is ordered or
-  batched. With `--against` and the same seed, the draw continues down the same order past the
-  excerpts already returned.
+- With the same multiset of parsed record texts and multiplicities, group assignments, task, seed,
+  `--tokens`, `-n`, threshold, encoding, chunk size, overlap, and `--against` texts, the ordered excerpt
+  texts, IDs, occurrence counts, draws, and population/sample counts repeat bit for bit, provided the
+  relevance scores and jselect/tokenizer versions are unchanged. Renaming a file, using a relative
+  rather than absolute path, reordering records, or moving repeated records does not change that sample.
+  Source references, rendered citations, token usage, timings, and the first-appearance order of `--per`
+  lines may differ. Keep the scorer/model fixed too; model responses or a custom scorer that depends on
+  metadata or batch order can change the scores. `--group-by` preserves row order within each merged
+  record, so reordering those rows changes the text and falls outside this guarantee.
+- `--against` removes returned texts and all their occurrences from the next population. Run 1 plus
+  run 2 is **not a larger representative sample**; do not report "n1+n2 of N" from the two runs. To
+  enlarge a sample, rerun with a larger `--tokens` or `-n` and the same seed. The prefix is preserved
+  and draws never fall while the fitted population and scores stay the same. If a budget change
+  splits passages differently, it changes the population and this nesting guarantee does not apply.
 - A small sample is noisy, and a representative sample still cannot establish causation. `stats`
   reports both sizes so that uncertainty can be stated.
+
+### Using this in a paper
+
+This is a sequential sample with a length-dependent stopping time, not a fixed-n simple random sample.
+For publication, use `-n` with a roomy `--tokens` and check `stats.sample_stop == "max_items"` on every
+line. `-n` caps distinct displayed texts; repeated occurrences can make the draw count larger. Report
+n (`sample_occurrences`), N (`population_occurrences`), threshold, seed, scorer/model, and that the unit
+is a passage occurrence. Weights live in a `"draws":N` header when more than one occurrence was drawn
+(and in JSON `draws` for every item). Whether a downstream ranker honors those weights is untested.
 
 ## One context per group
 
@@ -182,11 +209,11 @@ company-year.
 
 ```bash
 jselect "Complaints about account access" complaints.jsonl --per company_year \
-  --sample representative --seed 7 --tokens 2000 --json --output dossiers.jsonl
+  --mode semantic --sample representative --seed 7 --tokens 2000 --json --output dossiers.jsonl
 
 # Or save the index once; the field is recorded when the index is built
 jselect index complaints.jsonl --per company_year --output complaints.jselect
-jselect "Complaints about account access" complaints.jselect --per company_year --tokens 2000 --json
+jselect "Complaints about account access" complaints.jselect --per company_year --mode semantic --tokens 2000 --json
 ```
 
 ```python
@@ -196,6 +223,10 @@ dossiers = select_per(records, task="Complaints about account access", per="comp
 for dossier in dossiers:
     print(dossier.per["value"], dossier.tokens, len(dossier.items))
 ```
+
+Use `--mode semantic` when each dossier must be selected by semantic relevance. Otherwise `auto`
+can use keyword matching when no key is configured; local-mode warnings also appear on stderr with
+JSON Lines output.
 
 Dictionaries and rows supply the field directly; a `Record` supplies it in `metadata`, for example
 `Record(text, metadata={"company_year": "acme-2021"})`.
@@ -209,6 +240,7 @@ samples of different groups are not independent on shared text. (With `--local`,
 still computed over the whole collection.) Output is JSON Lines, so `--json` is required: one object per value,
 in order of first appearance, in the usual schema plus `per` (`field`, `value`, and the value's indexed
 `passages` and `occurrences`). A value with no relevant passage still gets a line with an empty context.
+With `--tokens 0`, every value gets an empty context object without scoring.
 `--against` accepts the JSON Lines of an earlier `--per` run; an excerpt it lists is excluded from every group.
 
 Limits: the field must hold a string or integer in every record, and one field is supported, so build
