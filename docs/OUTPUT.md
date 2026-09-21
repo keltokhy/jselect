@@ -2,6 +2,8 @@
 
 `jselect "question" data.jsonl --json` and `Selection.to_dict()` use the same schema.
 Additional fields may be added within version 1. Consumers should ignore fields they do not recognize.
+Representative sampling was added this way: `schema_version` stays 1, its fields appear only when
+`--sample representative` is requested, and default output is unchanged.
 
 ```json
 {
@@ -34,7 +36,10 @@ An item has:
   for an issue or a count of independently affected users.
 - `relevance`: normalized lexical score, a Jev decision, or the custom scorer's number in [0,1].
 - `novelty`: one minus maximum weighted lexical similarity to previously supplied/selected excerpts.
+  `null` in a representative sample, where novelty plays no part.
 - `reason`: the actual algorithmic selection rule; it is not a generated explanation of the evidence.
+- `draws`: representative samples only. How many of this text's `occurrences` fell in the sample,
+  from 1 to `occurrences`. A value above 1 also appears as `draws` in the item's context header.
 
 Each source contains `source`, `record_id`, one-based `line`, `end_line`, zero-based Unicode character
 `start` and exclusive `end`, `field`, `structured`, and `record_sha256` of the full canonical record text.
@@ -57,6 +62,33 @@ Grouped rows use a canonical concatenation of member texts separated by two newl
 include `group_by`, `group_id`, and overlapping `members` with original file/row/field locations and
 character spans in the group's canonical text. Input order is preserved. Group context headers list the
 source rows; detailed member mappings are available in JSON.
+
+## Representative samples
+
+With `--sample representative`, items are a seeded random sample instead of a relevance/novelty
+selection, in the order drawn. The population is every fitted, previously unseen passage with relevance
+at or above `threshold` (default 0.5; in local mode every passage sharing a task term, default 0).
+Each occurrence of each such passage receives a uniform random key derived from the seed, the passage
+ID, and its first source location. The sample is every occurrence whose key is below a cutoff, and the
+cutoff is the key of the first passage that cannot be added: it does not fit the remaining token budget
+or would exceed `--max-items`. A repeated text is shown once with its `draws`. The fit check reserves
+room for the largest `draws` value a text could show, so a context can end a few tokens short.
+
+`stats` then has `selection_method: "random_occurrence_sample_without_replacement"` and:
+
+- `sample`: `"representative"`; `seed`: the seed used; `threshold`: the population's relevance floor.
+- `population_passages`, `population_occurrences`: distinct relevant passages and their total occurrences.
+  Identical excerpts produced by subdividing different parents can be counted as separate passages
+  here; if drawn, they are merged into one item.
+- `sample_passages`, `sample_occurrences`: items returned and the sum of their `draws`.
+- `sample_stop`: what ended the draw: `budget`, `max_items`, or `population` (every occurrence was drawn).
+- `candidates` equals `population_passages`. `candidate_limit` and `diversity` are absent because
+  neither applies. `scan` is `all`, including in local mode, where the lexical index is read in full.
+
+The passage that ends the draw is excluded and is more often long, so long passages are somewhat
+under-represented unless `--max-items` ends the draw first. Repeated draws of an included text add
+almost no tokens, so heavily repeated texts are drawn slightly more often than their share. The unit
+is a passage occurrence; records that span several passages have proportionally more chances.
 
 ## Statistics and limits
 

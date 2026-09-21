@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Add `--sample representative` (`sample="representative"` in Python) with `--seed`: a random draw of relevant
+  passage occurrences without replacement, reporting population and sample sizes for measurement use.
+  Default selection and its output are unchanged.
+
 ## 0.1.1
 
 - Default semantic and custom selection to full scans so lexical retrieval does not silently exclude relevant evidence.

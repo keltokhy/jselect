@@ -57,8 +57,11 @@ class Evidence:
     sources: list[dict[str, Any]]
     occurrences: int
     relevance: float
-    novelty: float
+    # None under --sample representative, where novelty plays no part in selection.
+    novelty: float | None
     reason: str
+    # Occurrences of this text that fell in a representative sample; None under the default rule.
+    draws: int | None = None
 
 
 @dataclass
@@ -74,4 +77,8 @@ class Selection:
     schema_version: int = 1
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        data = asdict(self)
+        for item in data["items"]:
+            if item["draws"] is None:
+                del item["draws"]
+        return data

@@ -110,8 +110,18 @@ def parser_for(command):
     p.add_argument(
         "--diversity", type=float, default=0.7, help="penalty for repetitive text, 0..1 (default: 0.7)"
     )
-    p.add_argument("--threshold", type=float, help="minimum relevance score (semantic default: 0.25)")
+    p.add_argument(
+        "--threshold",
+        type=float,
+        help="minimum relevance score (semantic default: 0.25; 0.5 with --sample representative)",
+    )
     p.add_argument("-n", "--max-items", type=int, help="also cap the number of selected passages")
+    p.add_argument(
+        "--sample",
+        choices=["representative"],
+        help="draw relevant passages at random instead of favoring the most relevant and novel",
+    )
+    p.add_argument("--seed", type=int, default=0, help="random seed for --sample (default: 0)")
     p.add_argument("--api", choices=["typesafe", "openrouter", "gateway"])
     p.add_argument("--model", help="override the pinned Jev model")
     p.add_argument(
@@ -219,6 +229,8 @@ def main(argv=None, *, out=None, err=None, transport=None) -> int:
                 threshold=args.threshold,
                 max_items=args.max_items,
                 against=args.against,
+                sample=args.sample,
+                seed=args.seed,
                 api=args.api,
                 model=args.model,
                 budget=args.budget,
@@ -246,6 +258,15 @@ def main(argv=None, *, out=None, err=None, transport=None) -> int:
                 f"{stats.get('seconds', 0):.3f}s",
                 file=err,
             )
+            if stats.get("sample"):
+                print(
+                    f"jselect: {stats['sample']} sample: {stats['sample_occurrences']} of "
+                    f"{stats['population_occurrences']} relevant occurrences "
+                    f"({stats['sample_passages']} of {stats['population_passages']} passages); "
+                    f"threshold {stats['threshold']:g}; seed {stats['seed']}; random without replacement; "
+                    f"ended by {stats['sample_stop']}",
+                    file=err,
+                )
         if not args.json:
             for warning in result.warnings:
                 print(f"jselect: {warning}", file=err)
