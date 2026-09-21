@@ -8,6 +8,7 @@ import pytest
 
 from jselect import Index, Record, aselect_per, count_tokens, select, select_per
 from jselect.cli import main
+from jselect.types import PER
 
 
 def rows():
@@ -47,7 +48,7 @@ def test_each_group_gets_its_own_budgeted_context_from_one_shared_scan(sample):
     for result in results:
         assert result.tokens == count_tokens(result.context, "bytes") <= 700
         assert result.stats["passages_evaluated"] == 71
-        assert all(ref["per"] == result.per["value"] for item in result.items for ref in item.sources)
+        assert all(ref[PER] == result.per["value"] for item in result.items for ref in item.sources)
     acme, bolt, cask, dune = results
     # A large group neither starves a small one nor lends it a budget.
     assert acme.tokens > 500 and bolt.items and cask.items
@@ -61,18 +62,20 @@ def test_each_group_gets_its_own_budgeted_context_from_one_shared_scan(sample):
 @pytest.mark.parametrize("sample", [None, "representative"])
 def test_a_group_is_selected_as_if_it_were_the_whole_collection(sample):
     # Records share one line number, so citation headers cost the same with or without the other groups.
-    data = [Record(row["text"], id=row["id"], metadata={"per": row["company_year"]}) for row in rows()]
+    data = [
+        Record(row["text"], id=row["id"], metadata={"company_year": row["company_year"]}) for row in rows()
+    ]
     options = {k: v for k, v in OPTIONS.items() if k != "per"}
     results = select_per(data, scorer=Scorer(), sample=sample, seed=5, **OPTIONS)
     for result in results:
-        alone = [rec for rec in data if rec.metadata["per"] == result.per["value"]]
+        alone = [rec for rec in data if rec.metadata["company_year"] == result.per["value"]]
         expected = select(alone, scorer=Scorer(), sample=sample, seed=5, **options)
         assert result.context == expected.context
         assert [item.occurrences for item in result.items] == [item.occurrences for item in expected.items]
         if sample:
             for key in ("population_passages", "population_occurrences", "sample_occurrences", "sample_stop"):
                 assert result.stats[key] == expected.stats[key]
-    with pytest.raises(ValueError, match="Record metadata needs per"):
+    with pytest.raises(ValueError, match="Record metadata needs 'company_year'"):
         select_per([Record("strong text", id="bare")], scorer=Scorer(), **OPTIONS)
 
 
@@ -114,7 +117,7 @@ def test_budgets_smaller_than_a_passage_split_per_group_and_score_shared_excerpt
         for item in result.items:
             ref = item.sources[0]
             original = next(row["text"] for row in data if row["id"] == ref["record_id"])
-            assert ref["per"] == result.per["value"] and item.text == original[ref["start"] : ref["end"]]
+            assert ref[PER] == result.per["value"] and item.text == original[ref["start"] : ref["end"]]
 
 
 def test_against_applies_to_every_group(tmp_path):

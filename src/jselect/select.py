@@ -12,14 +12,14 @@ import time
 from bisect import insort
 from collections import Counter
 from dataclasses import replace
-from itertools import groupby, islice
+from itertools import islice
 from pathlib import Path
 
 from .index import Index, _digest
 from .inputs import records
 from .judge import JevScorer, SemanticError, resolve_backend, validate_score
 from .text import chunks, count_tokens, features, similarity, words
-from .types import Evidence, Passage, Selection, merge_passages
+from .types import PER, Evidence, Passage, Selection, merge_passages
 
 
 def render_item(item: Evidence | Passage, number: int) -> str:
@@ -72,9 +72,13 @@ def previous_texts(against) -> list[str]:
 
 
 def fit_passages(
-    passages: list[Passage], *, tokens: int, encoding: str, task: str, local: bool = False
+    passages: list[Passage], *, tokens: int, encoding: str, task: str, local: bool = False, apart=None
 ) -> list[Passage]:
-    """Rechunk oversized candidates before judging, so scores describe exactly the returned evidence."""
+    """Rechunk oversized candidates before judging, so scores describe exactly the returned evidence.
+
+    Equal excerpts are merged; `apart` (see merge_passages) limits that to one --per value or one
+    indexed parent, which makes the result independent of how the scan was cut into blocks.
+    """
     result = []
     query = set(words(task))
     for p in passages:
@@ -109,7 +113,7 @@ def fit_passages(
                 result.append(part)
             elif len(part.text) < len(p.text) and len(part.text) > 8:
                 result.extend(fit_passages([part], tokens=tokens, encoding=encoding, task=task, local=local))
-    return merge_passages(result)
+    return merge_passages(result, apart=apart)
 
 
 def pack(
@@ -222,45 +226,64 @@ class Draw:
     once, so a passage stands in for its occurrences through their smallest key, and the rest of
     its draws are counted afterwards. Only the front of the order is kept in memory; a passage
     behind more than twice the token budget can never be reached.
+
+    A unit is one fitted text within one indexed passage, and the caller adds each unit once. Its
+    key depends only on the seed, that parent's ID, and the text, never on caller-supplied record
+    IDs or on how the scan was ordered or cut into blocks. Equal texts from different parents are
+    separate, independent units that become one item if both are drawn.
     """
 
     def __init__(self, *, tokens: int, encoding: str, seed: int, max_items: int | None = None):
         self.tokens, self.encoding, self.seed, self.max_items = tokens, encoding, seed, max_items
+        # Units at the front of the order: (key, identity) sorted, and identity -> (key, passage, cost).
         self.head: list[tuple] = []
+        self.units: dict[tuple, tuple] = {}
         # The smallest key known to lie outside the sample; 1.0 while nothing has been discarded.
         self.bound = 1.0
         self.passages = self.occurrences = 0
+        # Set by finish() when the sample is empty although relevant passages exist.
+        self.note: str | None = None
 
     def extend(self, passages: list[Passage]) -> None:
         for passage in passages:
             self.add(passage)
 
     def add(self, passage: Passage) -> None:
-        self.passages += 1
         self.occurrences += passage.occurrences
-        ref = passage.sources[0] if passage.sources else {}
-        # The location keeps equal texts that reach the scan separately statistically independent.
-        salt = (self.seed, passage.id, ref.get("source"), ref.get("record_id"), ref.get("start"))
+        parent = passage.sources[0].get("passage_id") if passage.sources else None
+        salt = (self.seed, parent or passage.id, passage.id)
+        held = self.units.pop(salt, None)
+        if held:
+            # The same unit again: one unit with the combined count, never two sharing a random number.
+            self.head.remove((held[0], salt))
+            passage = merge_passages([held[1], passage])[0]
+        else:
+            self.passages += 1
         # The minimum of n independent uniform keys, computed stably for large n.
         key = -math.expm1(math.log1p(-_uniform(*salt)) / passage.occurrences)
         if key >= self.bound:
             return
-        cost = count_tokens(render_item(passage, 1), self.encoding)
-        insort(self.head, (key, self.passages, passage, cost, salt))
+        cost = held[2] if held else count_tokens(render_item(passage, 1), self.encoding)
+        insort(self.head, (key, salt))
+        self.units[salt] = (key, passage, cost)
         spent, texts = 0, set()
-        for i, (_, _, p, c, _) in enumerate(self.head):
+        for i, (_, unit) in enumerate(self.head):
+            _, p, c = self.units[unit]
             spent += 0 if p.text in texts else c
             texts.add(p.text)
             full = self.max_items is not None and len(texts) > self.max_items
             if (full or spent > 2 * self.tokens) and i + 1 < len(self.head):
                 self.bound = self.head[i + 1][0]
+                for _, dropped in self.head[i + 1 :]:
+                    del self.units[dropped]
                 del self.head[i + 1 :]
                 break
 
     def finish(self, reason: str) -> tuple[list[Evidence], dict]:
         chosen: dict[str, list] = {}
         cutoff, stop = self.bound, "population" if self.bound == 1.0 else "budget"
-        for key, _, p, _, salt in self.head:
+        for key, salt in self.head:
+            p = self.units[salt][1]
             entry = chosen.get(p.text)
             if entry is None and self.max_items is not None and len(chosen) >= self.max_items:
                 cutoff, stop = key, "max_items"
@@ -279,6 +302,12 @@ class Draw:
             # A tokenizer may charge more for a shorter header; end the draw one passage earlier.
             _, (_, parts) = chosen.popitem()
             cutoff, stop = min(key for key, _, _ in parts), "budget"
+        if not items and self.passages:
+            # Every fitted passage fits alone, so only the reserved draw count can block the first one.
+            self.note = (
+                "The first passage drawn fits the token budget only without the room reserved for its draw "
+                "count, and the draw never skips ahead, so the sample is empty. Raise --tokens slightly."
+            )
         return items, {
             "population_passages": self.passages,
             "population_occurrences": self.occurrences,
@@ -421,13 +450,24 @@ async def aselect(
         prior_set = set(prior)
         retrieval_start = time.perf_counter()
 
+        def apart(p):
+            ref = p.sources[0]
+            # Equal excerpts stay apart across --per values, and across indexed parents when sampling,
+            # so a sampled unit never depends on how the scan was cut into blocks.
+            return (ref.get(PER) if _per else None, ref.get("passage_id") if sample else None)
+
         def fitted(data):
             iterator = iter(data)
             while block := list(islice(iterator, 256)):
                 yield from (
                     p
                     for p in fit_passages(
-                        block, tokens=tokens, encoding=encoding, task=task, local=mode == "local"
+                        block,
+                        tokens=tokens,
+                        encoding=encoding,
+                        task=task,
+                        local=mode == "local",
+                        apart=apart if _per or sample else None,
                     )
                     if p.text not in prior_set
                 )
@@ -458,31 +498,57 @@ async def aselect(
         }
         if scan == "all":
 
-            def runs():
+            def found():
                 # A local population is every lexical match, not the diversified shortlist.
-                found = index.matches(task, per=bool(_per)) if mode == "local" else index.all(per=bool(_per))
-                # Adjacent passages with equal text, one for each --per value, share a single score.
-                return (list(run) for _, run in groupby(fitted(found), key=lambda p: p.text))
+                return fitted(
+                    index.matches(task, per=bool(_per)) if mode == "local" else index.all(per=bool(_per))
+                )
 
+            def distinct(passages):
+                seen = set()
+                for p in passages:
+                    if p.id not in seen:
+                        seen.add(p.id)
+                        yield p
+
+            # Sampling and --per score each distinct text once in a scan, however often it recurs across
+            # parents or groups; this map is separate from the persistent cache. Ordinary selection keeps
+            # the earlier behavior and scores every fitted passage as it arrives.
+            known = {} if sample or _per else None
             if judge:
-                judge.preflight(task, (run[0] for run in runs()))
-            stream = runs()
-            while block := list(islice(stream, 256)):
-                # Excerpts subdivided for different --per values can repeat without being adjacent.
-                unique = list({run[0].text: run[0] for run in block}.values())
+                judge.preflight(task, found() if known is None else distinct(found()))
+            # The sampled population is relevance at or above the threshold, zero included. Local mode
+            # also needs a shared task term, and the default rule keeps its earlier positive-score floor.
+            inclusive = bool(sample) and mode != "local"
+            stream = found()
+            while True:
+                block, fresh, waiting = [], [], set()
+                for p in stream:
+                    block.append(p)
+                    if known is None or (p.id not in known and p.id not in waiting):
+                        fresh.append(p)
+                        waiting.add(p.id)
+                    # A scorer sees at most 256 passages; repeats of known texts ride along unscored.
+                    if len(fresh) == 256 or len(block) == 4096:
+                        break
+                if not block:
+                    break
                 t0 = time.perf_counter()
-                block_scores = dict(zip((p.text for p in unique), await score_batch(unique), strict=True))
+                fresh_scores = await score_batch(fresh) if fresh else []
                 scoring_seconds += time.perf_counter() - t0
-                scored_count += len(unique)
+                scored_count += len(fresh)
+                if known is None:
+                    block_scores = fresh_scores
+                else:
+                    known.update(zip((p.id for p in fresh), fresh_scores, strict=True))
+                    block_scores = [known[p.id] for p in block]
                 eligible = {}
-                for run in block:
-                    s = block_scores[run[0].text]
-                    if s >= threshold and s > 0:
-                        for p in run:
-                            value = p.sources[0]["per"] if _per else None
-                            eligible.setdefault(value, []).append(replace(p, retrieval_score=s))
-                for value, found in eligible.items():
-                    groups[value].extend(found)
+                for p, s in zip(block, block_scores, strict=True):
+                    if s >= threshold and (s > 0 or inclusive):
+                        value = p.sources[0][PER] if _per else None
+                        eligible.setdefault(value, []).append(replace(p, retrieval_score=s))
+                for value, passages in eligible.items():
+                    groups[value].extend(passages)
             source_considered = index.stats["unique_passages"]
         else:
             pool = index.candidates(
@@ -535,7 +601,10 @@ async def aselect(
             context = render(items)
             notes = list(warnings)
             if not items:
-                notes.append("No new passage met the relevance threshold and fit the token budget.")
+                notes.append(
+                    (sample and group.note)
+                    or "No new passage met the relevance threshold and fit the token budget."
+                )
             stats = {
                 **index.stats,
                 "mode": mode,
@@ -598,7 +667,8 @@ async def aselect_per(data, *, task: str, per: str, tokens: int = 8000, **option
 
     The collection is scanned and scored once; selection then runs separately for each value with
     its own `tokens` budget. Other options are those of `aselect`. A saved or reused index must
-    have been built with the same `per` field. Each result's `per` names its value.
+    have been built with the same `per` field. A `Record` supplies the field in its metadata.
+    Values are compared as text. Each result's `per` names its value.
     """
     if not isinstance(per, str) or not per:
         raise ValueError("per must name a record field")

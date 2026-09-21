@@ -1,9 +1,10 @@
 """Frozen default-mode outputs: `default_selection.json` was written by 0.1.1, before sampling existed."""
 
+import importlib
 import json
 from pathlib import Path
 
-from jselect import Record, select
+from jselect import Index, Record, select
 
 GOLDEN = Path(__file__).with_name("default_selection.json")
 TIMINGS = ("index_seconds", "retrieval_seconds", "scoring_seconds", "selection_seconds", "seconds")
@@ -46,6 +47,27 @@ def default_outputs() -> str:
         encoding="bytes",
         scorer=graded,
         against=runs["custom_small"],
+    )
+    # Oversized records whose equal excerpts reach the scan in different blocks of 256, and records
+    # whose own metadata uses the key "per": neither may change under sampling or --per support.
+    long = "shared boilerplate sentence. " * 50
+    rows = [Record(long + f" unique tail {i:04}", id=f"r{i:04}") for i in range(260)]
+    fit = importlib.import_module("jselect.select").fit_passages
+    with Index.build(rows) as index:
+        parts = fit(list(index.all())[:256], tokens=300, encoding="bytes", task="x")
+    tails = [p.text for p in parts if "unique tail" in p.text][:50]
+    runs["duplicates_across_blocks"] = select(
+        rows, task="x", tokens=300, encoding="bytes", against=tails, scorer=lambda t, ps: [0.9] * len(ps)
+    )
+    runs["metadata_named_per"] = select(
+        [
+            Record(long + f" unique tail {i:04}", id=f"r{i:04}", metadata={"per": str(i % 2)})
+            for i in range(4)
+        ],
+        task="x",
+        tokens=300,
+        encoding="bytes",
+        scorer=lambda t, ps: [0.1 if "unique tail" in p.text else 0.95 for p in ps],
     )
     payload = {}
     for name, result in runs.items():

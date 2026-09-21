@@ -15,7 +15,7 @@ from typing import Any
 
 from pathspec import GitIgnoreSpec
 
-from .types import Record
+from .types import PER, Record
 
 TEXT_FIELDS = ("text", "content", "message", "messages", "conversation", "body", "abstract")
 SKIP_DIRS = {".git", ".venv", "node_modules", "__pycache__", ".pytest_cache", ".ruff_cache"}
@@ -54,6 +54,13 @@ def as_text(value: Any) -> str:
     return value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, sort_keys=True)
 
 
+def per_value(value: Any, where: str) -> str:
+    """One representation everywhere: values are compared as text, so 1 and "1" name the same group."""
+    if not isinstance(value, (str, int)) or isinstance(value, bool):
+        raise ValueError(f"{where}: --per field must be a string or integer")
+    return str(value)
+
+
 def record(
     value: Any,
     *,
@@ -90,9 +97,7 @@ def record(
             part = field_value(value, per)
         except (KeyError, IndexError, ValueError, TypeError) as e:
             raise ValueError(f"{source}:{line}: missing --per field {per!r}") from e
-        if not isinstance(part, (str, int)) or isinstance(part, bool):
-            raise ValueError(f"{source}:{line}: --per field must be a string or integer")
-        metadata["per"] = str(part)
+        metadata[PER] = per_value(part, f"{source}:{line}")
     return Record(
         text,
         id=str(value.get("id", value.get("_id", line))),
@@ -281,7 +286,7 @@ def group_records(data: Iterable[Record], group_by: str) -> Iterator[Record]:
             ):
                 row = json.loads(payload)
                 text = row["text"]
-                parts.add(row["metadata"].get("per"))
+                parts.add(row["metadata"].get(PER))
                 members.append(
                     {
                         "source": row["source"],
@@ -290,7 +295,7 @@ def group_records(data: Iterable[Record], group_by: str) -> Iterator[Record]:
                         "field": row["field"],
                         "start": position,
                         "end": position + len(text),
-                        **{k: v for k, v in row["metadata"].items() if k not in {"group_key", "per"}},
+                        **{k: v for k, v in row["metadata"].items() if k not in {"group_key", PER}},
                     }
                 )
                 texts.append(text)
@@ -299,7 +304,7 @@ def group_records(data: Iterable[Record], group_by: str) -> Iterator[Record]:
                 raise ValueError(f"group {key!r} spans more than one --per value; its rows must agree")
             metadata = {"group_by": group_by, "group_id": key, "members": members}
             if parts != {None}:
-                metadata["per"] = parts.pop()
+                metadata[PER] = parts.pop()
             yield Record(
                 "\n\n".join(texts), id=key, source="(grouped records)", structured=True, metadata=metadata
             )
