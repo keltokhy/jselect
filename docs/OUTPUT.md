@@ -90,6 +90,24 @@ under-represented unless `--max-items` ends the draw first. Repeated draws of an
 almost no tokens, so heavily repeated texts are drawn slightly more often than their share. The unit
 is a passage occurrence; records that span several passages have proportionally more chances.
 
+## One context per group
+
+`--per FIELD --json` and `select_per(...)` return one object per value of the field, as JSON Lines in
+order of first appearance. Each line is a complete object in this schema with one more key:
+
+```json
+{"per": {"field": "company_year", "value": "acme-2021", "passages": 61, "occurrences": 80}}
+```
+
+The values shown are illustrative. `passages` and `occurrences` count the value's distinct indexed passages and their occurrences, relevant
+or not, before any fitting or `--against` exclusion. Within a line, `occurrences`, `sources`, `draws`,
+`candidates`, `selected`, and the population and sample counts belong to that value alone, and every
+source carries `per` with the value. Index counts, `passages_evaluated`, `scored_passages`, `calls`,
+`cost`, and the timings other than `selection_seconds` describe the single shared scan and repeat on
+every line. A value with no relevant passage has an empty `context` and the usual warning. An index
+built with `--per` adds `per` and `per_values` to its `stats`; it remains a schema version 1 index and
+still answers ordinary queries. An error replaces the whole stream with the single error object.
+
 ## Statistics and limits
 
 - `records`, `passages`, `unique_passages`, `characters`: indexed snapshot counts. Grouped conversations

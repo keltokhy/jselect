@@ -53,7 +53,7 @@ Use `--mode semantic` to require semantic scoring and fail if credentials are mi
 # Customer conversations, with common text fields detected automatically
 jselect "What prevents users from finishing signup?" conversations.jsonl --tokens 2000
 
-# Related turns stored as separate, possibly interleaved rows
+# Related turns stored as separate, possibly interleaved rows, merged into one record per conversation
 jselect "Where does the assistant contradict itself?" turns.jsonl --group-by conversation_id
 
 # Source code and documentation, respecting .gitignore and .ignore
@@ -167,6 +167,46 @@ What the sample does and does not support:
 - A small sample is noisy, and a representative sample still cannot establish causation. `stats`
   reports both sizes so that uncertainty can be stated.
 
+## One context per group
+
+`--group-by` merges related rows into one record. `--per FIELD` does the opposite job: it keeps records
+as they are and returns a separate budgeted context for each value of a field, such as one dossier per
+company-year.
+
+```bash
+jselect "Complaints about account access" complaints.jsonl --per company_year \
+  --sample representative --seed 7 --tokens 2000 --json --output dossiers.jsonl
+
+# Or save the index once; the field is recorded when the index is built
+jselect index complaints.jsonl --per company_year --output complaints.jselect
+jselect "Complaints about account access" complaints.jselect --per company_year --tokens 2000 --json
+```
+
+```python
+from jselect import select_per
+
+dossiers = select_per(records, task="Complaints about account access", per="company_year", tokens=2000)
+for dossier in dossiers:
+    print(dossier.per["value"], dossier.tokens, len(dossier.items))
+```
+
+The collection is scanned once and each distinct passage text is scored once, however many groups it
+appears in. Selection then runs separately for each value with its own `--tokens` budget, under either
+rule, as if that group were the whole collection: occurrence counts, citations, and sample populations
+are the group's own. (With `--local`, lexical scores are still computed over the whole collection.)
+Output is JSON Lines, so `--json` is required: one object per value,
+in order of first appearance, in the usual schema plus `per` (`field`, `value`, and the value's indexed
+`passages` and `occurrences`). A value with no relevant passage still gets a line with an empty context.
+`--against` accepts the JSON Lines of an earlier `--per` run; an excerpt it lists is excluded from every group.
+
+Limits: the field must hold a string or integer in every record, and one field is supported, so build
+a combined column for keys such as company and year. With `--group-by`, all rows of a merged record must
+share the value. `--scan shortlist` is refused, and `--local` reads every lexical match instead of a
+shortlist, because one global shortlist would starve small groups. `calls`, `cost`, and timings in each
+line describe the shared scan; do not sum them across lines. Memory grows with the number of groups,
+most under the default rule, which keeps up to `--candidates` passages for each. Excerpts subdivided to
+fit a budget smaller than one passage can differ between groups and are then scored separately.
+
 ## Python and agents
 
 ```python
@@ -261,7 +301,8 @@ not calibrated confidence in a final answer. The JSON reports how much of the co
 Default stdout is the exact context string. `--json` returns one object with `schema_version: 1`,
 `task`, `context`, `items`, `tokens`, `token_budget`, `encoding`, `stats`, and `warnings`.
 Each item contains original `text`, a stable content-hash `id`, `sources`, `occurrences`, `relevance`,
-`novelty`, and the selection rule used; representative samples add `draws` and leave `novelty` null. See [the output contract](https://github.com/keltokhy/jselect/blob/main/docs/OUTPUT.md).
+`novelty`, and the selection rule used; representative samples add `draws` and leave `novelty` null.
+With `--per`, stdout is one JSON object per line, each with a `per` key. See [the output contract](https://github.com/keltokhy/jselect/blob/main/docs/OUTPUT.md).
 
 Exit 0 means success, including empty evidence. Exit 2 means invalid input, bad setup, budget refusal,
 or a provider error. Exit 130 means interruption. JSON errors have an `error` object and any available

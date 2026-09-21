@@ -55,13 +55,19 @@ def as_text(value: Any) -> str:
 
 
 def record(
-    value: Any, *, source: str, line: int, field: str | None = None, group_by: str | None = None
+    value: Any,
+    *,
+    source: str,
+    line: int,
+    field: str | None = None,
+    group_by: str | None = None,
+    per: str | None = None,
 ) -> Record:
     if isinstance(value, Record):
         return value
     if isinstance(value, str):
-        if field or group_by:
-            raise ValueError(f"{source}:{line}: --field and --group-by require an object")
+        if field or group_by or per:
+            raise ValueError(f"{source}:{line}: --field, --group-by, and --per require an object")
         return Record(value, id=str(line), source=source, line=line)
     if not isinstance(value, dict):
         raise ValueError(f"{source}:{line}: expected text or an object, got {type(value).__name__}")
@@ -79,6 +85,14 @@ def record(
         if not isinstance(group, (str, int)) or isinstance(group, bool):
             raise ValueError(f"{source}:{line}: grouping field must be a string or integer")
         metadata = {"group_key": str(group)}
+    if per:
+        try:
+            part = field_value(value, per)
+        except (KeyError, IndexError, ValueError, TypeError) as e:
+            raise ValueError(f"{source}:{line}: missing --per field {per!r}") from e
+        if not isinstance(part, (str, int)) or isinstance(part, bool):
+            raise ValueError(f"{source}:{line}: --per field must be a string or integer")
+        metadata["per"] = str(part)
     return Record(
         text,
         id=str(value.get("id", value.get("_id", line))),
@@ -157,6 +171,7 @@ def _read_paths(
     glob: str | None = None,
     exclude: Iterable[str] = (),
     group_by: str | None = None,
+    per: str | None = None,
 ) -> Iterator[Record]:
     paths = list(paths)
     explicit = {Path(p).expanduser().resolve() for p in paths if str(p) != "-" and Path(p).is_file()}
@@ -193,12 +208,12 @@ def _read_paths(
                     if not raw.strip():
                         continue
                     value = json.loads(raw) if kind == "jsonl" else raw.rstrip("\r\n")
-                    yield record(value, source=source, line=line, field=field, group_by=group_by)
+                    yield record(value, source=source, line=line, field=field, group_by=group_by, per=per)
             elif kind == "json":
                 data = json.load(stream)
                 values = data if isinstance(data, list) else [data]
                 for i, value in enumerate(values, 1):
-                    rec = record(value, source=source, line=1, field=field, group_by=group_by)
+                    rec = record(value, source=source, line=1, field=field, group_by=group_by, per=per)
                     identifier = (
                         str(value.get("id", value.get("_id", i))) if isinstance(value, dict) else str(i)
                     )
@@ -231,10 +246,11 @@ def _read_paths(
                         line=line,
                         field=field,
                         group_by=group_by,
+                        per=per,
                     )
             elif kind == "text":
-                if field or group_by:
-                    raise ValueError(f"{source}: --field and --group-by need JSON/JSONL/CSV input")
+                if field or group_by or per:
+                    raise ValueError(f"{source}: --field, --group-by, and --per need JSON/JSONL/CSV input")
                 yield Record(stream.read(), id=source, source=source)
             else:
                 raise ValueError(f"unknown input format: {kind}")
@@ -259,12 +275,13 @@ def group_records(data: Iterable[Record], group_by: str) -> Iterator[Record]:
             )
         db.execute("CREATE INDEX groups ON rows(group_key, ordinal)")
         for (key,) in db.execute("SELECT group_key FROM rows GROUP BY group_key ORDER BY MIN(ordinal)"):
-            texts, members, position = [], [], 0
+            texts, members, position, parts = [], [], 0, set()
             for (payload,) in db.execute(
                 "SELECT payload FROM rows WHERE group_key=? ORDER BY ordinal", (key,)
             ):
                 row = json.loads(payload)
                 text = row["text"]
+                parts.add(row["metadata"].get("per"))
                 members.append(
                     {
                         "source": row["source"],
@@ -273,17 +290,18 @@ def group_records(data: Iterable[Record], group_by: str) -> Iterator[Record]:
                         "field": row["field"],
                         "start": position,
                         "end": position + len(text),
-                        **{k: v for k, v in row["metadata"].items() if k != "group_key"},
+                        **{k: v for k, v in row["metadata"].items() if k not in {"group_key", "per"}},
                     }
                 )
                 texts.append(text)
                 position += len(text) + 2
+            if len(parts) > 1:
+                raise ValueError(f"group {key!r} spans more than one --per value; its rows must agree")
+            metadata = {"group_by": group_by, "group_id": key, "members": members}
+            if parts != {None}:
+                metadata["per"] = parts.pop()
             yield Record(
-                "\n\n".join(texts),
-                id=key,
-                source="(grouped records)",
-                structured=True,
-                metadata={"group_by": group_by, "group_id": key, "members": members},
+                "\n\n".join(texts), id=key, source="(grouped records)", structured=True, metadata=metadata
             )
     finally:
         db.close()
@@ -294,14 +312,16 @@ def read_paths(paths, *, group_by: str | None = None, **options) -> Iterator[Rec
     yield from group_records(raw, group_by) if group_by else raw
 
 
-def records(data, *, field: str | None = None, group_by: str | None = None, **options) -> Iterator[Record]:
+def records(
+    data, *, field: str | None = None, group_by: str | None = None, per: str | None = None, **options
+) -> Iterator[Record]:
     if isinstance(data, (str, os.PathLike)):
-        yield from read_paths([data], field=field, group_by=group_by, **options)
+        yield from read_paths([data], field=field, group_by=group_by, per=per, **options)
     elif isinstance(data, Record):
         yield from group_records([data], group_by) if group_by else [data]
     else:
         raw = (
-            record(value, source="(records)", line=i, field=field, group_by=group_by)
+            record(value, source="(records)", line=i, field=field, group_by=group_by, per=per)
             for i, value in enumerate([data] if isinstance(data, dict) else data, 1)
         )
         yield from group_records(raw, group_by) if group_by else raw

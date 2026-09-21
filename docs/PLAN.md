@@ -14,6 +14,8 @@ No jgrep dependency and no changes to its repository.
 - `--against` excludes exact previous excerpts and discourages similar material on follow-up questions.
 - `--sample representative` replaces relevance/novelty selection with a seeded random draw of relevant
   passage occurrences, without replacement, and reports population size, sample size, threshold, and seed.
+- `--per FIELD` and `select_per(...)` score the collection once and return one budgeted context per value
+  of a field as JSON Lines. It is distinct from `--group-by`, which merges rows into one record.
 - Local mode requires no credentials or paid requests. Semantic mode uses configured Jev credentials,
   versioned prompts/models, bounded concurrency, retries, persistent caching, and explicit cost accounting.
 - Persisted SQLite indexes avoid re-indexing for repeated queries. Full semantic scanning is the default
