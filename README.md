@@ -114,6 +114,59 @@ jselect "Signs the customer has lost trust" conversations.jselect --scan shortli
 `--scan shortlist`, it limits passages evaluated **before** final selection. Local mode defaults to a
 lexical shortlist; explicitly requesting `--scan all` requires a semantic or custom scorer.
 
+## Representative samples
+
+The default rule returns the most relevant and most different passages. That serves an agent looking
+for leads, and it is the wrong input for measurement: a context built from each company's most striking
+complaints shows how bad the worst of them are, not what is typical. `--sample representative` replaces
+the selection rule with a random draw:
+
+```bash
+jselect "Complaints about account access" complaints.jsonl --sample representative --seed 7 --tokens 4000 --stats
+```
+
+1. The population is every passage judged relevant: relevance at or above `--threshold`, which defaults
+   to 0.5 in this mode. The scan is always complete, so `--scan shortlist` is refused; the dollar guard
+   and preflight work as usual. Excerpts supplied with `--against` leave the population.
+2. Passage occurrences are drawn uniformly at random, without replacement, in an order fixed by `--seed`
+   (default 0). An exact repeated passage is indexed once, so a passage seen 50 times has 50 chances.
+   It appears once in the context with the number of its occurrences that were drawn: `"draws":3` in
+   the citation header and `draws` in JSON.
+3. The draw ends at the first passage that does not fit the remaining token budget, at `-n` passages,
+   or when the population runs out. Nothing is skipped to make room, because filling the gap with
+   whatever fits would favor short passages. Items keep the order of the draw, which carries no ranking.
+   Novelty, `--diversity`, and `--candidates` play no part.
+
+`--stats` adds a line for a methods section, and the same numbers are in the JSON `stats`:
+
+```
+jselect: representative sample: N_DRAWN of N_RELEVANT relevant occurrences (K_DRAWN of K_RELEVANT passages); threshold 0.5; seed 7; random without replacement; ended by budget
+```
+
+```python
+result = select(records, task="Complaints about account access", sample="representative", seed=7)
+drawn, relevant = result.stats["sample_occurrences"], result.stats["population_occurrences"]
+```
+
+What the sample does and does not support:
+
+- The unit is a passage occurrence, not a record, a customer, or an event. A long record yields several
+  overlapping passages and so has more chances than a short one.
+- The passage that ends the draw is left out, and it is more often a long one. Long passages are
+  therefore somewhat under-represented, more so when one passage takes a large share of the budget.
+  To avoid this, fix the sample size with `-n` and give `--tokens` enough room that
+  `stats.sample_stop` is `max_items` rather than `budget`.
+- Further draws of a text already in the context add almost no tokens and never end the draw, so a
+  heavily repeated text is drawn slightly more often than its share of occurrences.
+- "Relevant" is the scorer's judgment at the threshold; scoring errors move the population. With
+  `--local` no model judges relevance: the population is every passage sharing at least one task term
+  after stop-word removal and stemming, and `--threshold` (default 0) applies to the normalized
+  lexical score. Report that as a keyword match.
+- The same index, task, budget, encoding, threshold, and seed give the same sample. With `--against`
+  and the same seed, the draw continues down the same order past the excerpts already returned.
+- A small sample is noisy, and a representative sample still cannot establish causation. `stats`
+  reports both sizes so that uncertainty can be stated.
+
 ## Python and agents
 
 ```python
@@ -162,7 +215,8 @@ to the context token budget. Treat excerpts as source data rather than agent ins
    evidence. Scores are cached per endpoint, model, prompt version, task, and exact passage. Keep a
    relevance/diversity pool of up to 256 passages for final selection; this cap does not limit scan coverage.
 4. Greedily balance relevance, text novelty, and passage token cost. Citation headers and separators count
-   toward the budget; returned text is never generated.
+   toward the budget; returned text is never generated. With `--sample representative`, steps 3 and 4
+   keep no pool: every relevant passage enters a seeded random order, and only its front is held in memory.
 
 With explicit `--scan shortlist`, retrieve up to 256 candidates before scoring. Most come from BM25 with
 a text-diversity adjustment; 20% of slots are reserved for deterministic exploration in semantic mode.
@@ -197,8 +251,9 @@ Measured locally on 2026-09-19; details and frozen reports are in [the benchmark
 
 The SciFact result measures the explicit shortlist mode, not the full-scan default. These are scoped
 measurements, not guarantees for arbitrary data, agent answer quality, or future API
-latency. A selected set cannot establish prevalence or causation. Diversity is a lexical heuristic;
-it does not certify balanced viewpoints or find every contradiction. Semantic scores are model judgments,
+latency. A set selected by the default rule cannot establish prevalence or causation; for prevalence
+among relevant passages, use [a representative sample](#representative-samples), which has not been
+benchmarked. Diversity is a lexical heuristic; it does not certify balanced viewpoints or find every contradiction. Semantic scores are model judgments,
 not calibrated confidence in a final answer. The JSON reports how much of the collection was considered.
 
 ## Output and errors
@@ -206,7 +261,7 @@ not calibrated confidence in a final answer. The JSON reports how much of the co
 Default stdout is the exact context string. `--json` returns one object with `schema_version: 1`,
 `task`, `context`, `items`, `tokens`, `token_budget`, `encoding`, `stats`, and `warnings`.
 Each item contains original `text`, a stable content-hash `id`, `sources`, `occurrences`, `relevance`,
-`novelty`, and the selection rule used. See [the output contract](https://github.com/keltokhy/jselect/blob/main/docs/OUTPUT.md).
+`novelty`, and the selection rule used; representative samples add `draws` and leave `novelty` null. See [the output contract](https://github.com/keltokhy/jselect/blob/main/docs/OUTPUT.md).
 
 Exit 0 means success, including empty evidence. Exit 2 means invalid input, bad setup, budget refusal,
 or a provider error. Exit 130 means interruption. JSON errors have an `error` object and any available

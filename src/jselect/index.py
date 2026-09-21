@@ -181,15 +181,35 @@ class Index:
         for row in self.db.execute("SELECT * FROM passages ORDER BY id"):
             yield self._passage(row)
 
+    @staticmethod
+    def _expression(task: str) -> str:
+        terms = list(dict.fromkeys(words(task)))[:64]
+        if not terms:
+            terms = [w for w in task.split() if w.strip()][:64]
+        return " OR ".join('"' + t.replace('"', '""') + '"' for t in terms)
+
+    def matches(self, task: str):
+        """Every passage sharing a task term, best first, with no shortlist: the local sampling population."""
+        expression = self._expression(task)
+        best = None
+        for row in (
+            self.db.execute(
+                "SELECT p.*, bm25(search) AS rank FROM search JOIN passages p ON p.id=search.rowid "
+                "WHERE search MATCH ? ORDER BY rank, p.id",
+                (expression,),
+            )
+            if expression
+            else []
+        ):
+            best = -row["rank"] if best is None else best
+            yield self._passage(row, max(0.0, -row["rank"] / best))
+
     def search(self, task: str, limit: int = 256, *, exclude: set[str] | None = None) -> list[Passage]:
         """Plain BM25 results, for callers that want retrieval without diversification or model calls."""
         if limit <= 0:
             raise ValueError("candidate limit must be positive")
         exclude = exclude or set()
-        terms = list(dict.fromkeys(words(task)))[:64]
-        if not terms:
-            terms = [w for w in task.split() if w.strip()][:64]
-        expression = " OR ".join('"' + t.replace('"', '""') + '"' for t in terms)
+        expression = self._expression(task)
         rows = (
             self.db.execute(
                 "SELECT p.*, bm25(search) AS rank FROM search JOIN passages p ON p.id=search.rowid "

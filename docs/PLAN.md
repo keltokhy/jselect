@@ -12,6 +12,8 @@ No jgrep dependency and no changes to its repository.
   repetition. Local mode uses lexical retrieval. No manual labels or taxonomy. Existing retrieved
   passages and custom scorers also work.
 - `--against` excludes exact previous excerpts and discourages similar material on follow-up questions.
+- `--sample representative` replaces relevance/novelty selection with a seeded random draw of relevant
+  passage occurrences, without replacement, and reports population size, sample size, threshold, and seed.
 - Local mode requires no credentials or paid requests. Semantic mode uses configured Jev credentials,
   versioned prompts/models, bounded concurrency, retries, persistent caching, and explicit cost accounting.
 - Persisted SQLite indexes avoid re-indexing for repeated queries. Full semantic scanning is the default
@@ -32,7 +34,8 @@ No jgrep dependency and no changes to its repository.
 7. Usage docs explain source boundaries, model limitations, selection bias, tokenization, and actual measurements.
 
 Quality claims must match evidence. Diversity is a heuristic, not a guarantee of completeness, balanced
-representation, statistical prevalence, causality, or finding every contradiction.
+representation, statistical prevalence, causality, or finding every contradiction. Representative
+sampling is covered by offline tests of its draw, weighting, and budget rules; it has no benchmark yet.
 
 ## Completion evidence
 

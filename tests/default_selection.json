@@ -1,0 +1,722 @@
+{
+ "custom": {
+  "task": "signup problems",
+  "context": "[1] {\"source\":\"(records)\",\"line\":1,\"id\":\"e10\",\"chars\":[0,76]}\nSignup email never arrived. The verification message is missing. Attempt 10.\n\n[2] {\"source\":\"(records)\",\"line\":1,\"id\":\"l0\",\"chars\":[0,46]}\nThe account was locked after a password reset.\n\n[3] {\"source\":\"(records)\",\"line\":1,\"id\":\"worked\",\"chars\":[0,67]}\nSignup worked after opening the email link in the original browser.\n\n[4] {\"source\":\"(records)\",\"line\":1,\"id\":\"card\",\"chars\":[0,64]}\nSignup requires a credit card even for the free plan, so I left.\n\n[5] {\"source\":\"(records)\",\"line\":1,\"id\":\"e11\",\"chars\":[0,76]}\nSignup email never arrived. The verification message is missing. Attempt 11.\n\n[6] {\"source\":\"(records)\",\"line\":1,\"id\":\"e0\",\"chars\":[0,75]}\nSignup email never arrived. The verification message is missing. Attempt 0.",
+  "items": [
+   {
+    "id": "af5abf360973d6e6f1689ef318d710853ee2f0fc2ace4b5f88e3bc731d4255fa",
+    "text": "Signup email never arrived. The verification message is missing. Attempt 10.",
+    "sources": [
+     {
+      "source": "(records)",
+      "record_id": "e10",
+      "line": 1,
+      "start": 0,
+      "end": 76,
+      "field": null,
+      "record_sha256": "af5abf360973d6e6f1689ef318d710853ee2f0fc2ace4b5f88e3bc731d4255fa",
+      "passage_id": "af5abf360973d6e6f1689ef318d710853ee2f0fc2ace4b5f88e3bc731d4255fa",
+      "structured": false,
+      "end_line": 1
+     }
+    ],
+    "occurrences": 1,
+    "relevance": 0.9,
+    "novelty": 1.0,
+    "reason": "custom relevance; greedy selection balances relevance, text novelty, and token cost"
+   },
+   {
+    "id": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+    "text": "The account was locked after a password reset.",
+    "sources": [
+     {
+      "source": "(records)",
+      "record_id": "l0",
+      "line": 1,
+      "start": 0,
+      "end": 46,
+      "field": null,
+      "record_sha256": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "passage_id": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "structured": false,
+      "end_line": 1
+     },
+     {
+      "source": "(records)",
+      "record_id": "l1",
+      "line": 1,
+      "start": 0,
+      "end": 46,
+      "field": null,
+      "record_sha256": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "passage_id": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "structured": false,
+      "end_line": 1
+     },
+     {
+      "source": "(records)",
+      "record_id": "l2",
+      "line": 1,
+      "start": 0,
+      "end": 46,
+      "field": null,
+      "record_sha256": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "passage_id": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "structured": false,
+      "end_line": 1
+     },
+     {
+      "source": "(records)",
+      "record_id": "l3",
+      "line": 1,
+      "start": 0,
+      "end": 46,
+      "field": null,
+      "record_sha256": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "passage_id": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "structured": false,
+      "end_line": 1
+     },
+     {
+      "source": "(records)",
+      "record_id": "l4",
+      "line": 1,
+      "start": 0,
+      "end": 46,
+      "field": null,
+      "record_sha256": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "passage_id": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "structured": false,
+      "end_line": 1
+     }
+    ],
+    "occurrences": 7,
+    "relevance": 0.8,
+    "novelty": 1.0,
+    "reason": "custom relevance; greedy selection balances relevance, text novelty, and token cost"
+   },
+   {
+    "id": "219973cb902aa9e27277e936b27363c267d6795e2b19aa23792d24480ae7b8de",
+    "text": "Signup worked after opening the email link in the original browser.",
+    "sources": [
+     {
+      "source": "(records)",
+      "record_id": "worked",
+      "line": 1,
+      "start": 0,
+      "end": 67,
+      "field": null,
+      "record_sha256": "219973cb902aa9e27277e936b27363c267d6795e2b19aa23792d24480ae7b8de",
+      "passage_id": "219973cb902aa9e27277e936b27363c267d6795e2b19aa23792d24480ae7b8de",
+      "structured": false,
+      "end_line": 1
+     }
+    ],
+    "occurrences": 1,
+    "relevance": 0.8,
+    "novelty": 0.959766157972,
+    "reason": "custom relevance; greedy selection balances relevance, text novelty, and token cost"
+   },
+   {
+    "id": "6cf8a22ec4f8f0f8f360a93786ba563113e33753ef319f3c668910dac139eea4",
+    "text": "Signup requires a credit card even for the free plan, so I left.",
+    "sources": [
+     {
+      "source": "(records)",
+      "record_id": "card",
+      "line": 1,
+      "start": 0,
+      "end": 64,
+      "field": null,
+      "record_sha256": "6cf8a22ec4f8f0f8f360a93786ba563113e33753ef319f3c668910dac139eea4",
+      "passage_id": "6cf8a22ec4f8f0f8f360a93786ba563113e33753ef319f3c668910dac139eea4",
+      "structured": false,
+      "end_line": 1
+     }
+    ],
+    "occurrences": 1,
+    "relevance": 0.65,
+    "novelty": 0.985482377038,
+    "reason": "custom relevance; greedy selection balances relevance, text novelty, and token cost"
+   },
+   {
+    "id": "98acad1bb6358916286cc62ab23ca1a996aabe67d7e39c50443173563fa8fa5d",
+    "text": "Signup email never arrived. The verification message is missing. Attempt 11.",
+    "sources": [
+     {
+      "source": "(records)",
+      "record_id": "e11",
+      "line": 1,
+      "start": 0,
+      "end": 76,
+      "field": null,
+      "record_sha256": "98acad1bb6358916286cc62ab23ca1a996aabe67d7e39c50443173563fa8fa5d",
+      "passage_id": "98acad1bb6358916286cc62ab23ca1a996aabe67d7e39c50443173563fa8fa5d",
+      "structured": false,
+      "end_line": 1
+     }
+    ],
+    "occurrences": 1,
+    "relevance": 0.9,
+    "novelty": 0.407668572037,
+    "reason": "custom relevance; greedy selection balances relevance, text novelty, and token cost"
+   },
+   {
+    "id": "469b7a39e82247fe4c461bc8a4043b09261b9bb3dee02558534c640827cb90d0",
+    "text": "Signup email never arrived. The verification message is missing. Attempt 0.",
+    "sources": [
+     {
+      "source": "(records)",
+      "record_id": "e0",
+      "line": 1,
+      "start": 0,
+      "end": 75,
+      "field": null,
+      "record_sha256": "469b7a39e82247fe4c461bc8a4043b09261b9bb3dee02558534c640827cb90d0",
+      "passage_id": "469b7a39e82247fe4c461bc8a4043b09261b9bb3dee02558534c640827cb90d0",
+      "structured": false,
+      "end_line": 1
+     }
+    ],
+    "occurrences": 1,
+    "relevance": 0.85,
+    "novelty": 0.256019924544,
+    "reason": "custom relevance; greedy selection balances relevance, text novelty, and token cost"
+   }
+  ],
+  "tokens": 788,
+  "token_budget": 900,
+  "encoding": "bytes",
+  "stats": {
+   "schema_version": 1,
+   "records": 23,
+   "passages": 23,
+   "unique_passages": 17,
+   "empty_records": 0,
+   "characters": 3147,
+   "chunk_size": 1800,
+   "overlap": 240,
+   "mode": "custom",
+   "scan": "all",
+   "candidate_limit": 256,
+   "candidates": 15,
+   "source_passages_considered": 17,
+   "passages_evaluated": 19,
+   "selected": 6,
+   "previous_passages": 0,
+   "calls": 0,
+   "cost": 0.0,
+   "index_seconds": 0.0,
+   "retrieval_seconds": 0.0,
+   "scoring_seconds": 0.0,
+   "selection_seconds": 0.0,
+   "seconds": 0.0,
+   "selection_method": "greedy_relevance_novelty_per_token",
+   "diversity": 0.7,
+   "threshold": 0.25
+  },
+  "warnings": [],
+  "schema_version": 1
+ },
+ "custom_small": {
+  "task": "signup problems",
+  "context": "[1] {\"source\":\"(records)\",\"line\":1,\"id\":\"e10\",\"chars\":[0,76]}\nSignup email never arrived. The verification message is missing. Attempt 10.\n\n[2] {\"source\":\"(records)\",\"line\":1,\"id\":\"l0\",\"chars\":[0,46]}\nThe account was locked after a password reset.",
+  "items": [
+   {
+    "id": "af5abf360973d6e6f1689ef318d710853ee2f0fc2ace4b5f88e3bc731d4255fa",
+    "text": "Signup email never arrived. The verification message is missing. Attempt 10.",
+    "sources": [
+     {
+      "source": "(records)",
+      "record_id": "e10",
+      "line": 1,
+      "start": 0,
+      "end": 76,
+      "field": null,
+      "record_sha256": "af5abf360973d6e6f1689ef318d710853ee2f0fc2ace4b5f88e3bc731d4255fa",
+      "passage_id": "af5abf360973d6e6f1689ef318d710853ee2f0fc2ace4b5f88e3bc731d4255fa",
+      "structured": false,
+      "end_line": 1
+     }
+    ],
+    "occurrences": 1,
+    "relevance": 0.9,
+    "novelty": 1.0,
+    "reason": "custom relevance; greedy selection balances relevance, text novelty, and token cost"
+   },
+   {
+    "id": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+    "text": "The account was locked after a password reset.",
+    "sources": [
+     {
+      "source": "(records)",
+      "record_id": "l0",
+      "line": 1,
+      "start": 0,
+      "end": 46,
+      "field": null,
+      "record_sha256": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "passage_id": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "structured": false,
+      "end_line": 1
+     },
+     {
+      "source": "(records)",
+      "record_id": "l1",
+      "line": 1,
+      "start": 0,
+      "end": 46,
+      "field": null,
+      "record_sha256": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "passage_id": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "structured": false,
+      "end_line": 1
+     },
+     {
+      "source": "(records)",
+      "record_id": "l2",
+      "line": 1,
+      "start": 0,
+      "end": 46,
+      "field": null,
+      "record_sha256": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "passage_id": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "structured": false,
+      "end_line": 1
+     },
+     {
+      "source": "(records)",
+      "record_id": "l3",
+      "line": 1,
+      "start": 0,
+      "end": 46,
+      "field": null,
+      "record_sha256": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "passage_id": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "structured": false,
+      "end_line": 1
+     },
+     {
+      "source": "(records)",
+      "record_id": "l4",
+      "line": 1,
+      "start": 0,
+      "end": 46,
+      "field": null,
+      "record_sha256": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "passage_id": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "structured": false,
+      "end_line": 1
+     }
+    ],
+    "occurrences": 7,
+    "relevance": 0.8,
+    "novelty": 1.0,
+    "reason": "custom relevance; greedy selection balances relevance, text novelty, and token cost"
+   }
+  ],
+  "tokens": 247,
+  "token_budget": 260,
+  "encoding": "bytes",
+  "stats": {
+   "schema_version": 1,
+   "records": 23,
+   "passages": 23,
+   "unique_passages": 17,
+   "empty_records": 0,
+   "characters": 3147,
+   "chunk_size": 1800,
+   "overlap": 240,
+   "mode": "custom",
+   "scan": "all",
+   "candidate_limit": 256,
+   "candidates": 15,
+   "source_passages_considered": 17,
+   "passages_evaluated": 19,
+   "selected": 2,
+   "previous_passages": 0,
+   "calls": 0,
+   "cost": 0.0,
+   "index_seconds": 0.0,
+   "retrieval_seconds": 0.0,
+   "scoring_seconds": 0.0,
+   "selection_seconds": 0.0,
+   "seconds": 0.0,
+   "selection_method": "greedy_relevance_novelty_per_token",
+   "diversity": 0.7,
+   "threshold": 0.25
+  },
+  "warnings": [],
+  "schema_version": 1
+ },
+ "local": {
+  "task": "signup email locked",
+  "context": "[1] {\"source\":\"(records)\",\"line\":1,\"id\":\"l0\",\"chars\":[0,46]}\nThe account was locked after a password reset.\n\n[2] {\"source\":\"(records)\",\"line\":1,\"id\":\"e0\",\"chars\":[0,75]}\nSignup email never arrived. The verification message is missing. Attempt 0.\n\n[3] {\"source\":\"(records)\",\"line\":1,\"id\":\"worked\",\"chars\":[0,67]}\nSignup worked after opening the email link in the original browser.\n\n[4] {\"source\":\"(records)\",\"line\":1,\"id\":\"card\",\"chars\":[0,64]}\nSignup requires a credit card even for the free plan, so I left.\n\n[5] {\"source\":\"(records)\",\"line\":1,\"id\":\"e10\",\"chars\":[0,76]}\nSignup email never arrived. The verification message is missing. Attempt 10.",
+  "items": [
+   {
+    "id": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+    "text": "The account was locked after a password reset.",
+    "sources": [
+     {
+      "source": "(records)",
+      "record_id": "l0",
+      "line": 1,
+      "start": 0,
+      "end": 46,
+      "field": null,
+      "record_sha256": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "passage_id": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "structured": false,
+      "end_line": 1
+     },
+     {
+      "source": "(records)",
+      "record_id": "l1",
+      "line": 1,
+      "start": 0,
+      "end": 46,
+      "field": null,
+      "record_sha256": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "passage_id": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "structured": false,
+      "end_line": 1
+     },
+     {
+      "source": "(records)",
+      "record_id": "l2",
+      "line": 1,
+      "start": 0,
+      "end": 46,
+      "field": null,
+      "record_sha256": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "passage_id": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "structured": false,
+      "end_line": 1
+     },
+     {
+      "source": "(records)",
+      "record_id": "l3",
+      "line": 1,
+      "start": 0,
+      "end": 46,
+      "field": null,
+      "record_sha256": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "passage_id": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "structured": false,
+      "end_line": 1
+     },
+     {
+      "source": "(records)",
+      "record_id": "l4",
+      "line": 1,
+      "start": 0,
+      "end": 46,
+      "field": null,
+      "record_sha256": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "passage_id": "50ed6db915282273c0146af6743fc8aa61196cdfd7fc1d70dd93990d9738297a",
+      "structured": false,
+      "end_line": 1
+     }
+    ],
+    "occurrences": 7,
+    "relevance": 1.0,
+    "novelty": 1.0,
+    "reason": "local relevance; greedy selection balances relevance, text novelty, and token cost"
+   },
+   {
+    "id": "469b7a39e82247fe4c461bc8a4043b09261b9bb3dee02558534c640827cb90d0",
+    "text": "Signup email never arrived. The verification message is missing. Attempt 0.",
+    "sources": [
+     {
+      "source": "(records)",
+      "record_id": "e0",
+      "line": 1,
+      "start": 0,
+      "end": 75,
+      "field": null,
+      "record_sha256": "469b7a39e82247fe4c461bc8a4043b09261b9bb3dee02558534c640827cb90d0",
+      "passage_id": "469b7a39e82247fe4c461bc8a4043b09261b9bb3dee02558534c640827cb90d0",
+      "structured": false,
+      "end_line": 1
+     }
+    ],
+    "occurrences": 1,
+    "relevance": 7.89476e-07,
+    "novelty": 1.0,
+    "reason": "local relevance; greedy selection balances relevance, text novelty, and token cost"
+   },
+   {
+    "id": "219973cb902aa9e27277e936b27363c267d6795e2b19aa23792d24480ae7b8de",
+    "text": "Signup worked after opening the email link in the original browser.",
+    "sources": [
+     {
+      "source": "(records)",
+      "record_id": "worked",
+      "line": 1,
+      "start": 0,
+      "end": 67,
+      "field": null,
+      "record_sha256": "219973cb902aa9e27277e936b27363c267d6795e2b19aa23792d24480ae7b8de",
+      "passage_id": "219973cb902aa9e27277e936b27363c267d6795e2b19aa23792d24480ae7b8de",
+      "structured": false,
+      "end_line": 1
+     }
+    ],
+    "occurrences": 1,
+    "relevance": 7.89476e-07,
+    "novelty": 0.959766157972,
+    "reason": "local relevance; greedy selection balances relevance, text novelty, and token cost"
+   },
+   {
+    "id": "6cf8a22ec4f8f0f8f360a93786ba563113e33753ef319f3c668910dac139eea4",
+    "text": "Signup requires a credit card even for the free plan, so I left.",
+    "sources": [
+     {
+      "source": "(records)",
+      "record_id": "card",
+      "line": 1,
+      "start": 0,
+      "end": 64,
+      "field": null,
+      "record_sha256": "6cf8a22ec4f8f0f8f360a93786ba563113e33753ef319f3c668910dac139eea4",
+      "passage_id": "6cf8a22ec4f8f0f8f360a93786ba563113e33753ef319f3c668910dac139eea4",
+      "structured": false,
+      "end_line": 1
+     }
+    ],
+    "occurrences": 1,
+    "relevance": 3.81154e-07,
+    "novelty": 0.98415121118,
+    "reason": "local relevance; greedy selection balances relevance, text novelty, and token cost"
+   },
+   {
+    "id": "af5abf360973d6e6f1689ef318d710853ee2f0fc2ace4b5f88e3bc731d4255fa",
+    "text": "Signup email never arrived. The verification message is missing. Attempt 10.",
+    "sources": [
+     {
+      "source": "(records)",
+      "record_id": "e10",
+      "line": 1,
+      "start": 0,
+      "end": 76,
+      "field": null,
+      "record_sha256": "af5abf360973d6e6f1689ef318d710853ee2f0fc2ace4b5f88e3bc731d4255fa",
+      "passage_id": "af5abf360973d6e6f1689ef318d710853ee2f0fc2ace4b5f88e3bc731d4255fa",
+      "structured": false,
+      "end_line": 1
+     }
+    ],
+    "occurrences": 1,
+    "relevance": 7.89476e-07,
+    "novelty": 0.256019924544,
+    "reason": "local relevance; greedy selection balances relevance, text novelty, and token cost"
+   }
+  ],
+  "tokens": 648,
+  "token_budget": 700,
+  "encoding": "bytes",
+  "stats": {
+   "schema_version": 1,
+   "records": 23,
+   "passages": 23,
+   "unique_passages": 17,
+   "empty_records": 0,
+   "characters": 3147,
+   "chunk_size": 1800,
+   "overlap": 240,
+   "mode": "local",
+   "scan": "shortlist",
+   "candidate_limit": 256,
+   "candidates": 18,
+   "source_passages_considered": 17,
+   "passages_evaluated": 18,
+   "selected": 5,
+   "previous_passages": 0,
+   "calls": 0,
+   "cost": 0.0,
+   "index_seconds": 0.0,
+   "retrieval_seconds": 0.0,
+   "scoring_seconds": 0.0,
+   "selection_seconds": 0.0,
+   "seconds": 0.0,
+   "selection_method": "greedy_relevance_novelty_per_token",
+   "diversity": 0.7,
+   "threshold": 0.0
+  },
+  "warnings": [
+   "Local mode uses lexical relevance and text diversity; no semantic model was called."
+  ],
+  "schema_version": 1
+ },
+ "against": {
+  "task": "signup problems",
+  "context": "[1] {\"source\":\"(records)\",\"line\":1,\"id\":\"worked\",\"chars\":[0,67]}\nSignup worked after opening the email link in the original browser.\n\n[2] {\"source\":\"(records)\",\"line\":1,\"id\":\"card\",\"chars\":[0,64]}\nSignup requires a credit card even for the free plan, so I left.\n\n[3] {\"source\":\"(records)\",\"line\":1,\"id\":\"e11\",\"chars\":[0,76]}\nSignup email never arrived. The verification message is missing. Attempt 11.\n\n[4] {\"source\":\"(records)\",\"line\":1,\"id\":\"e0\",\"chars\":[0,75]}\nSignup email never arrived. The verification message is missing. Attempt 0.\n\n[5] {\"source\":\"(records)\",\"line\":1,\"id\":\"e1\",\"chars\":[0,75]}\nSignup email never arrived. The verification message is missing. Attempt 1.\n\n[6] {\"source\":\"(records)\",\"line\":1,\"id\":\"e2\",\"chars\":[0,75]}\nSignup email never arrived. The verification message is missing. Attempt 2.",
+  "items": [
+   {
+    "id": "219973cb902aa9e27277e936b27363c267d6795e2b19aa23792d24480ae7b8de",
+    "text": "Signup worked after opening the email link in the original browser.",
+    "sources": [
+     {
+      "source": "(records)",
+      "record_id": "worked",
+      "line": 1,
+      "start": 0,
+      "end": 67,
+      "field": null,
+      "record_sha256": "219973cb902aa9e27277e936b27363c267d6795e2b19aa23792d24480ae7b8de",
+      "passage_id": "219973cb902aa9e27277e936b27363c267d6795e2b19aa23792d24480ae7b8de",
+      "structured": false,
+      "end_line": 1
+     }
+    ],
+    "occurrences": 1,
+    "relevance": 0.8,
+    "novelty": 0.959766157972,
+    "reason": "custom relevance; greedy selection balances relevance, text novelty, and token cost"
+   },
+   {
+    "id": "6cf8a22ec4f8f0f8f360a93786ba563113e33753ef319f3c668910dac139eea4",
+    "text": "Signup requires a credit card even for the free plan, so I left.",
+    "sources": [
+     {
+      "source": "(records)",
+      "record_id": "card",
+      "line": 1,
+      "start": 0,
+      "end": 64,
+      "field": null,
+      "record_sha256": "6cf8a22ec4f8f0f8f360a93786ba563113e33753ef319f3c668910dac139eea4",
+      "passage_id": "6cf8a22ec4f8f0f8f360a93786ba563113e33753ef319f3c668910dac139eea4",
+      "structured": false,
+      "end_line": 1
+     }
+    ],
+    "occurrences": 1,
+    "relevance": 0.65,
+    "novelty": 0.985482377038,
+    "reason": "custom relevance; greedy selection balances relevance, text novelty, and token cost"
+   },
+   {
+    "id": "98acad1bb6358916286cc62ab23ca1a996aabe67d7e39c50443173563fa8fa5d",
+    "text": "Signup email never arrived. The verification message is missing. Attempt 11.",
+    "sources": [
+     {
+      "source": "(records)",
+      "record_id": "e11",
+      "line": 1,
+      "start": 0,
+      "end": 76,
+      "field": null,
+      "record_sha256": "98acad1bb6358916286cc62ab23ca1a996aabe67d7e39c50443173563fa8fa5d",
+      "passage_id": "98acad1bb6358916286cc62ab23ca1a996aabe67d7e39c50443173563fa8fa5d",
+      "structured": false,
+      "end_line": 1
+     }
+    ],
+    "occurrences": 1,
+    "relevance": 0.9,
+    "novelty": 0.407668572037,
+    "reason": "custom relevance; greedy selection balances relevance, text novelty, and token cost"
+   },
+   {
+    "id": "469b7a39e82247fe4c461bc8a4043b09261b9bb3dee02558534c640827cb90d0",
+    "text": "Signup email never arrived. The verification message is missing. Attempt 0.",
+    "sources": [
+     {
+      "source": "(records)",
+      "record_id": "e0",
+      "line": 1,
+      "start": 0,
+      "end": 75,
+      "field": null,
+      "record_sha256": "469b7a39e82247fe4c461bc8a4043b09261b9bb3dee02558534c640827cb90d0",
+      "passage_id": "469b7a39e82247fe4c461bc8a4043b09261b9bb3dee02558534c640827cb90d0",
+      "structured": false,
+      "end_line": 1
+     }
+    ],
+    "occurrences": 1,
+    "relevance": 0.85,
+    "novelty": 0.256019924544,
+    "reason": "custom relevance; greedy selection balances relevance, text novelty, and token cost"
+   },
+   {
+    "id": "eb392ad3002e742f481ff4c81b59065095e7778ceb4fbe7eaa4c281a64e2d9f4",
+    "text": "Signup email never arrived. The verification message is missing. Attempt 1.",
+    "sources": [
+     {
+      "source": "(records)",
+      "record_id": "e1",
+      "line": 1,
+      "start": 0,
+      "end": 75,
+      "field": null,
+      "record_sha256": "eb392ad3002e742f481ff4c81b59065095e7778ceb4fbe7eaa4c281a64e2d9f4",
+      "passage_id": "eb392ad3002e742f481ff4c81b59065095e7778ceb4fbe7eaa4c281a64e2d9f4",
+      "structured": false,
+      "end_line": 1
+     }
+    ],
+    "occurrences": 1,
+    "relevance": 0.85,
+    "novelty": 0.0,
+    "reason": "custom relevance; greedy selection balances relevance, text novelty, and token cost"
+   },
+   {
+    "id": "974b8d306d1e6e5ca547ab27b051fa69e4b18fbfd61c0fac99c57776b1b13132",
+    "text": "Signup email never arrived. The verification message is missing. Attempt 2.",
+    "sources": [
+     {
+      "source": "(records)",
+      "record_id": "e2",
+      "line": 1,
+      "start": 0,
+      "end": 75,
+      "field": null,
+      "record_sha256": "974b8d306d1e6e5ca547ab27b051fa69e4b18fbfd61c0fac99c57776b1b13132",
+      "passage_id": "974b8d306d1e6e5ca547ab27b051fa69e4b18fbfd61c0fac99c57776b1b13132",
+      "structured": false,
+      "end_line": 1
+     }
+    ],
+    "occurrences": 1,
+    "relevance": 0.85,
+    "novelty": 0.0,
+    "reason": "custom relevance; greedy selection balances relevance, text novelty, and token cost"
+   }
+  ],
+  "tokens": 815,
+  "token_budget": 900,
+  "encoding": "bytes",
+  "stats": {
+   "schema_version": 1,
+   "records": 23,
+   "passages": 23,
+   "unique_passages": 17,
+   "empty_records": 0,
+   "characters": 3147,
+   "chunk_size": 1800,
+   "overlap": 240,
+   "mode": "custom",
+   "scan": "all",
+   "candidate_limit": 256,
+   "candidates": 13,
+   "source_passages_considered": 17,
+   "passages_evaluated": 17,
+   "selected": 6,
+   "previous_passages": 2,
+   "calls": 0,
+   "cost": 0.0,
+   "index_seconds": 0.0,
+   "retrieval_seconds": 0.0,
+   "scoring_seconds": 0.0,
+   "selection_seconds": 0.0,
+   "seconds": 0.0,
+   "selection_method": "greedy_relevance_novelty_per_token",
+   "diversity": 0.7,
+   "threshold": 0.25
+  },
+  "warnings": [],
+  "schema_version": 1
+ }
+}

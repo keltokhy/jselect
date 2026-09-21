@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import inspect
 import json
 import math
+import random
 import time
+from bisect import insort
 from collections import Counter
 from dataclasses import replace
 from itertools import islice
@@ -35,6 +38,8 @@ def render_item(item: Evidence | Passage, number: int) -> str:
         location["group_by"] = ref["group_by"]
         location["group_id"] = ref["group_id"]
         location["rows"] = [{"source": m["source"], "line": m["line"]} for m in ref.get("members", [])]
+    if (getattr(item, "draws", None) or 1) > 1:
+        location["draws"] = item.draws
     return f"[{number}] {json.dumps(location, ensure_ascii=False, separators=(',', ':'))}\n{item.text}"
 
 
@@ -168,6 +173,124 @@ def pack(
     return selected
 
 
+def _uniform(*parts) -> float:
+    """A reproducible uniform number in [0, 1) from the seed and a passage's identity."""
+    digest = hashlib.sha256(json.dumps(parts, ensure_ascii=False).encode()).digest()
+    return (int.from_bytes(digest[:8], "big") >> 11) / 2**53
+
+
+def _generator(*parts) -> random.Random:
+    return random.Random(int(_uniform(*parts) * 2**53))
+
+
+def _binomial(rng: random.Random, n: int, p: float) -> int:
+    """Successes in n trials, by geometric gaps; random.binomialvariate needs Python 3.12."""
+    if n <= 0 or p <= 0:
+        return 0
+    if p >= 1:
+        return n
+    count, position, log_q = 0, 0, math.log1p(-p)
+    while True:
+        position += int(math.log(1 - rng.random()) / log_q) + 1
+        if position > n:
+            return count
+        count += 1
+
+
+class Draw:
+    """A seeded uniform random order over relevant passage occurrences, taken from the front.
+
+    Every occurrence has an independent uniform key, and the sample is each occurrence whose key
+    is below a cutoff: the key of the first passage that does not fit. Identical texts are indexed
+    once, so a passage stands in for its occurrences through their smallest key, and the rest of
+    its draws are counted afterwards. Only the front of the order is kept in memory; a passage
+    behind more than twice the token budget can never be reached.
+    """
+
+    def __init__(self, *, tokens: int, encoding: str, seed: int, max_items: int | None = None):
+        self.tokens, self.encoding, self.seed, self.max_items = tokens, encoding, seed, max_items
+        self.head: list[tuple] = []
+        # The smallest key known to lie outside the sample; 1.0 while nothing has been discarded.
+        self.bound = 1.0
+        self.passages = self.occurrences = 0
+
+    def add(self, passage: Passage) -> None:
+        self.passages += 1
+        self.occurrences += passage.occurrences
+        ref = passage.sources[0] if passage.sources else {}
+        # The location keeps equal texts that reach the scan separately statistically independent.
+        salt = (self.seed, passage.id, ref.get("source"), ref.get("record_id"), ref.get("start"))
+        # The minimum of n independent uniform keys, computed stably for large n.
+        key = -math.expm1(math.log1p(-_uniform(*salt)) / passage.occurrences)
+        if key >= self.bound:
+            return
+        cost = count_tokens(render_item(passage, 1), self.encoding)
+        insort(self.head, (key, self.passages, passage, cost, salt))
+        spent, texts = 0, set()
+        for i, (_, _, p, c, _) in enumerate(self.head):
+            spent += 0 if p.text in texts else c
+            texts.add(p.text)
+            full = self.max_items is not None and len(texts) > self.max_items
+            if (full or spent > 2 * self.tokens) and i + 1 < len(self.head):
+                self.bound = self.head[i + 1][0]
+                del self.head[i + 1 :]
+                break
+
+    def finish(self, reason: str) -> tuple[list[Evidence], dict]:
+        chosen: dict[str, list] = {}
+        cutoff, stop = self.bound, "population" if self.bound == 1.0 else "budget"
+        for key, _, p, _, salt in self.head:
+            entry = chosen.get(p.text)
+            if entry is None and self.max_items is not None and len(chosen) >= self.max_items:
+                cutoff, stop = key, "max_items"
+                break
+            passage = merge_passages([entry[0], p])[0] if entry else p
+            trial = {**chosen, p.text: [passage, [*(entry[1] if entry else []), (key, p.occurrences, salt)]]}
+            # Reserve the widest possible draw count so the final header cannot outgrow the budget.
+            if count_tokens(render(self._items(trial, None, reason)), self.encoding) > self.tokens:
+                cutoff, stop = key, "budget"
+                break
+            chosen = trial
+        while True:
+            items = self._items(chosen, cutoff, reason)
+            if count_tokens(render(items), self.encoding) <= self.tokens:
+                break
+            # A tokenizer may charge more for a shorter header; end the draw one passage earlier.
+            _, (_, parts) = chosen.popitem()
+            cutoff, stop = min(key for key, _, _ in parts), "budget"
+        return items, {
+            "population_passages": self.passages,
+            "population_occurrences": self.occurrences,
+            "sample_passages": len(items),
+            "sample_occurrences": sum(item.draws for item in items),
+            "sample_stop": stop,
+        }
+
+    def _items(self, chosen: dict[str, list], cutoff: float | None, reason: str) -> list[Evidence]:
+        items = []
+        for passage, parts in chosen.values():
+            draws = passage.occurrences
+            if cutoff is not None:
+                # Beyond its smallest key, each other occurrence is uniform on the rest of the interval.
+                draws = sum(
+                    1 + _binomial(_generator(*salt, "repeats"), n - 1, (cutoff - key) / (1 - key))
+                    for key, n, salt in parts
+                )
+            items.append(
+                Evidence(
+                    passage.id,
+                    passage.text,
+                    passage.sources,
+                    passage.occurrences,
+                    passage.retrieval_score,
+                    None,
+                    reason,
+                    draws,
+                )
+            )
+        return items
+
+
 async def aselect(
     data,
     *,
@@ -191,6 +314,8 @@ async def aselect(
     timeout: float = 20,
     cache: bool = True,
     scan: str | None = None,
+    sample: str | None = None,
+    seed: int = 0,
     chunk_size: int = 1800,
     overlap: int = 240,
     _transport=None,
@@ -201,6 +326,8 @@ async def aselect(
     `mode=auto` uses Jev if configured, otherwise explicitly reports local lexical selection.
     Omitting `scan` scores all eligible passages with semantic/custom scorers; local mode uses
     the lexical shortlist. Set `scan="shortlist"` to bound passages evaluated before scoring.
+    `sample="representative"` replaces relevance/novelty selection with a seeded random draw from
+    every passage at or above `threshold` (default 0.5; any lexical match in local mode).
     """
     started = time.perf_counter()
     if not isinstance(task, str) or not task.strip() or len(task) > 4000:
@@ -211,6 +338,12 @@ async def aselect(
         raise ValueError("mode must be auto/local/semantic; scan must be shortlist/all")
     if not 0 <= diversity <= 1 or candidates < 1 or (max_items is not None and max_items < 1):
         raise ValueError("diversity must be 0..1; candidates and max_items must be positive")
+    if sample not in {None, "representative"}:
+        raise ValueError("sample must be representative, or omitted for relevance/novelty selection")
+    if isinstance(seed, bool) or not isinstance(seed, int):
+        raise ValueError("seed must be an integer")
+    if sample and scan == "shortlist":
+        raise ValueError("--sample representative draws from every relevant passage; omit --scan shortlist")
     if threshold is not None:
         validate_score(threshold)
     # Validate/initialize tokenizer before any model calls or expensive indexing.
@@ -224,10 +357,11 @@ async def aselect(
         )
     mode = "custom" if scorer else "semantic" if backend else "local"
     if scan is None:
-        scan = "shortlist" if mode == "local" else "all"
-    if scan == "all" and mode == "local":
+        scan = "shortlist" if mode == "local" and not sample else "all"
+    if scan == "all" and mode == "local" and not sample:
         raise ValueError("--scan all requires a semantic or custom scorer; local mode uses the lexical index")
-    threshold = threshold if threshold is not None else (0.25 if mode != "local" else 0.0)
+    if threshold is None:
+        threshold = 0.0 if mode == "local" else 0.5 if sample else 0.25
     own_index = not isinstance(data, Index)
     if own_index and isinstance(data, (str, Path)) and Path(data).suffix == ".jselect":
         index = Index(data)
@@ -285,11 +419,13 @@ async def aselect(
             return [validate_score(s) for s in scores]
 
         source_considered, scored_count, scoring_seconds = 0, 0, 0.0
+        draw = Draw(tokens=tokens, encoding=encoding, seed=seed, max_items=max_items) if sample else None
         if scan == "all":
             if judge:
                 judge.preflight(task, fitted(index.all()))
             passages = []
-            stream = iter(fitted(index.all()))
+            # A local population is every lexical match, not the diversified shortlist.
+            stream = iter(fitted(index.matches(task) if mode == "local" else index.all()))
             while block := list(islice(stream, 256)):
                 t0 = time.perf_counter()
                 block_scores = await score_batch(block)
@@ -300,7 +436,11 @@ async def aselect(
                     for p, s in zip(block, block_scores, strict=True)
                     if s >= threshold and s > 0
                 ]
-                passages = Index._spread(passages + eligible, candidates)
+                if draw:
+                    for p in eligible:
+                        draw.add(p)
+                else:
+                    passages = Index._spread(passages + eligible, candidates)
             scores = [p.retrieval_score for p in passages]
             source_considered = index.stats["unique_passages"]
         else:
@@ -322,20 +462,28 @@ async def aselect(
         retrieved = time.perf_counter()
         if mode == "local":
             warnings.append(
-                "Local mode uses lexical relevance and text diversity; no semantic model was called."
+                "Local mode samples passages that share a task term; no semantic model judged relevance."
+                if draw
+                else "Local mode uses lexical relevance and text diversity; no semantic model was called."
             )
         scored = time.perf_counter()
-        items = pack(
-            passages,
-            scores,
-            tokens=tokens,
-            encoding=encoding,
-            diversity=diversity,
-            threshold=threshold,
-            previous=prior,
-            max_items=max_items,
-            mode=mode,
-        )
+        if draw:
+            items, sampling = draw.finish(
+                f"{mode} relevance at or above {threshold:g}; seeded random draw of passage occurrences, "
+                "without replacement"
+            )
+        else:
+            items = pack(
+                passages,
+                scores,
+                tokens=tokens,
+                encoding=encoding,
+                diversity=diversity,
+                threshold=threshold,
+                previous=prior,
+                max_items=max_items,
+                mode=mode,
+            )
         context = render(items)
         if scan != "all" and source_considered < index.stats["unique_passages"]:
             warnings.append(
@@ -364,6 +512,16 @@ async def aselect(
             "diversity": diversity,
             "threshold": threshold,
         }
+        if draw:
+            # Every relevant passage is a candidate for the draw; no pool cap or novelty applies.
+            del stats["candidate_limit"], stats["diversity"]
+            stats.update(
+                candidates=draw.passages,
+                selection_method="random_occurrence_sample_without_replacement",
+                sample=sample,
+                seed=seed,
+                **sampling,
+            )
         if judge:
             stats.update(judge.stats)
         return Selection(
