@@ -201,18 +201,23 @@ def test_full_scan_streams_and_keeps_only_the_front_of_the_order():
 
 
 def test_equal_excerpts_reaching_the_draw_separately_become_one_item():
-    def passage(record, occurrences):
-        ref = {"source": "a.txt", "line": 1, "record_id": record, "start": 0, "end": 17}
+    def passage(record, parent, occurrences):
+        ref = {"source": "a.txt", "line": 1, "record_id": record, "start": 0, "end": 17, "passage_id": parent}
         return Passage("same-id", "strong shared text", [ref], occurrences, 0.9)
 
     for seed in range(20):
+        # Cut from two indexed passages: two independent units, one item once both are drawn.
         draw = Draw(tokens=10_000, encoding="bytes", seed=seed)
-        draw.add(passage("first", 3))
-        draw.add(passage("second", 4))
+        draw.extend([passage("first", "parent-1", 3), passage("second", "parent-2", 4)])
         items, stats = draw.finish("rule")
         assert len(items) == 1 and items[0].draws == items[0].occurrences == 7
-        assert [ref["record_id"] for ref in items[0].sources] in (["first", "second"], ["second", "first"])
+        assert sorted(ref["record_id"] for ref in items[0].sources) == ["first", "second"]
         assert (stats["population_passages"], stats["sample_occurrences"]) == (2, 7)
+        # The same unit offered twice is one unit with the combined count.
+        again = Draw(tokens=10_000, encoding="bytes", seed=seed)
+        again.extend([passage("first", "parent-1", 3), passage("first", "parent-1", 4)])
+        items, stats = again.finish("rule")
+        assert (stats["population_passages"], stats["population_occurrences"], items[0].draws) == (1, 7, 7)
 
 
 @pytest.mark.parametrize(

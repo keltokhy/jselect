@@ -10,9 +10,9 @@ import sqlite3
 import tempfile
 from pathlib import Path
 
-from .inputs import records
+from .inputs import per_value, records
 from .text import chunks, signature, sketch_similarity, words
-from .types import Passage, merge_passages
+from .types import PER, Passage, merge_passages
 
 SCHEMA = 1
 
@@ -85,15 +85,22 @@ class Index:
             """)
             if per:
                 # Identical text is still stored once; each --per value keeps its own count and sources.
-                db.execute(
-                    "CREATE TABLE partitions (passage INTEGER NOT NULL, value TEXT NOT NULL, "
-                    "occurrences INTEGER NOT NULL, sources TEXT NOT NULL, PRIMARY KEY (passage, value))"
-                )
+                # Values are catalogued as records arrive, so one without any passage is still listed.
+                db.executescript("""
+                    CREATE TABLE per_values (value TEXT PRIMARY KEY, ordinal INTEGER NOT NULL);
+                    CREATE TABLE partitions (passage INTEGER NOT NULL, value TEXT NOT NULL,
+                        occurrences INTEGER NOT NULL, sources TEXT NOT NULL, PRIMARY KEY (passage, value));
+                """)
                 counts["per"] = per
             db.execute("BEGIN")
             for rec in records(data, field=field, group_by=group_by, per=per):
-                if per and "per" not in rec.metadata:
-                    raise ValueError(f"{rec.source}:{rec.line}: Record metadata needs per for --per")
+                if per:
+                    # Parsed rows carry the marker; a Record supplies the field in its metadata.
+                    where = f"{rec.source}:{rec.line}"
+                    if PER not in rec.metadata and per not in rec.metadata:
+                        raise ValueError(f"{where}: Record metadata needs {per!r} for --per")
+                    part = per_value(rec.metadata.get(PER, rec.metadata.get(per)), where)
+                    db.execute("INSERT OR IGNORE INTO per_values VALUES(?,?)", (part, counts["records"]))
                 counts["records"] += 1
                 counts["characters"] += len(rec.text)
                 if not rec.text.strip():
@@ -128,6 +135,8 @@ class Index:
                         ref["members"] = [
                             m for m in rec.metadata["members"] if m["end"] > start and m["start"] < end
                         ]
+                    if per:
+                        ref[PER] = part
                     ref["end_line"] = line if rec.structured else line + text.rstrip("\n").count("\n")
                     old = db.execute("SELECT id, sources FROM passages WHERE key=?", (key,)).fetchone()
                     if old:
@@ -147,9 +156,8 @@ class Index:
                         counts["unique_passages"] += 1
                     counts["passages"] += 1
                     if per:
-                        part = (passage, rec.metadata["per"])
                         old = db.execute(
-                            "SELECT sources FROM partitions WHERE passage=? AND value=?", part
+                            "SELECT sources FROM partitions WHERE passage=? AND value=?", (passage, part)
                         ).fetchone()
                         sources = json.loads(old[0]) if old else []
                         if len(sources) < 5 and ref not in sources:
@@ -157,7 +165,7 @@ class Index:
                         db.execute(
                             "INSERT INTO partitions VALUES(?,?,1,?) ON CONFLICT(passage, value) "
                             "DO UPDATE SET occurrences=occurrences+1, sources=excluded.sources",
-                            (*part, json.dumps(sources, ensure_ascii=False)),
+                            (passage, part, json.dumps(sources, ensure_ascii=False)),
                         )
             db.execute(
                 "CREATE VIRTUAL TABLE search USING fts5(text, content=passages, content_rowid=id, "
@@ -165,9 +173,7 @@ class Index:
             )
             db.execute("INSERT INTO search(search) VALUES('rebuild')")
             if per:
-                counts["per_values"] = db.execute("SELECT COUNT(DISTINCT value) FROM partitions").fetchone()[
-                    0
-                ]
+                counts["per_values"] = db.execute("SELECT COUNT(*) FROM per_values").fetchone()[0]
             db.execute("INSERT INTO meta VALUES ('stats', ?)", (json.dumps(counts),))
             db.commit()
             db.close()
@@ -221,8 +227,10 @@ class Index:
     def per_values(self) -> dict[str, dict[str, int]]:
         """Each --per value in order of first appearance, with its distinct passages and occurrences."""
         rows = self.db.execute(
-            "SELECT value, COUNT(*) AS passages, SUM(occurrences) AS occurrences FROM partitions "
-            "GROUP BY value ORDER BY MIN(passage), value"
+            "SELECT v.value, COALESCE(c.passages, 0) AS passages, COALESCE(c.occurrences, 0) AS occurrences "
+            "FROM per_values v LEFT JOIN (SELECT value, COUNT(*) AS passages, "
+            "SUM(occurrences) AS occurrences FROM partitions GROUP BY value) c "
+            "ON c.value=v.value ORDER BY v.ordinal"
         )
         return {
             row["value"]: {"passages": row["passages"], "occurrences": row["occurrences"]} for row in rows

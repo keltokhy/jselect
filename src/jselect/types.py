@@ -6,6 +6,9 @@ from dataclasses import asdict, dataclass
 from dataclasses import field as dc_field
 from typing import Any
 
+# Source-reference key holding a passage's --per value. Namespaced so user metadata cannot collide with it.
+PER = "jselect:per"
+
 
 @dataclass(frozen=True)
 class Record:
@@ -28,12 +31,15 @@ class Passage:
     retrieval_score: float = 0.0
 
 
-def merge_passages(passages: list[Passage]) -> list[Passage]:
-    """Coalesce identical fitted text while retaining known provenance from each parent."""
+def merge_passages(passages: list[Passage], *, apart=None) -> list[Passage]:
+    """Coalesce identical fitted text while retaining known provenance from each parent.
+
+    `apart(passage)` names what equal texts must not be merged across: a --per value, or the
+    indexed parent when sampling. Ordinary selection passes nothing and merges on text alone.
+    """
     merged: dict[tuple, Passage] = {}
     for p in passages:
-        # Under --per, the same text in two groups stays two passages with separate counts.
-        key = (p.text, p.sources[0].get("per") if p.sources else None)
+        key = (p.text, apart(p) if apart else None)
         if key not in merged:
             merged[key] = p
             continue
