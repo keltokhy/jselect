@@ -125,17 +125,19 @@ the selection rule with a random draw:
 jselect "Complaints about account access" complaints.jsonl --sample representative --seed 7 --tokens 4000 --stats
 ```
 
-1. The population is every passage judged relevant: relevance at or above `--threshold`, which defaults
-   to 0.5 in this mode. The scan is always complete, so `--scan shortlist` is refused; the dollar guard
-   and preflight work as usual. Excerpts supplied with `--against` leave the population.
+1. The population is every passage judged relevant: relevance at or above `--threshold`, inclusive,
+   which defaults to 0.5 in this mode. The scan is always complete, so `--scan shortlist` is refused;
+   the dollar guard and preflight work as usual. Excerpts supplied with `--against` leave the population.
 2. Passage occurrences are drawn uniformly at random, without replacement, in an order fixed by `--seed`
    (default 0). An exact repeated passage is indexed once, so a passage seen 50 times has 50 chances.
    It appears once in the context with the number of its occurrences that were drawn: `"draws":3` in
    the citation header and `draws` in JSON.
 3. The draw ends at the first passage that does not fit the remaining token budget, at `-n` passages,
    or when the population runs out. Nothing is skipped to make room, because filling the gap with
-   whatever fits would favor short passages. Items keep the order of the draw, which carries no ranking.
-   Novelty, `--diversity`, and `--candidates` play no part.
+   whatever fits would favor short passages. "Fits" is checked with room reserved for the largest
+   draw count each repeated text could show, not the count it ends up with, so a draw can end a few
+   tokens early. Items keep the order of the draw, which carries no ranking. Novelty, `--diversity`,
+   and `--candidates` play no part.
 
 `--stats` adds a line for a methods section, and the same numbers are in the JSON `stats`:
 
@@ -158,12 +160,17 @@ What the sample does and does not support:
   `stats.sample_stop` is `max_items` rather than `budget`.
 - Further draws of a text already in the context add almost no tokens and never end the draw, so a
   heavily repeated text is drawn slightly more often than its share of occurrences.
+- The reserved draw count makes a repeated text cost a few tokens more than it finally uses. With a
+  budget that barely holds one passage, that reserve alone can leave the sample empty; the result then
+  carries a warning that says so. Give `--tokens` room for several passages when measuring.
 - "Relevant" is the scorer's judgment at the threshold; scoring errors move the population. With
   `--local` no model judges relevance: the population is every passage sharing at least one task term
   after stop-word removal and stemming, and `--threshold` (default 0) applies to the normalized
-  lexical score. Report that as a keyword match.
-- The same index, task, budget, encoding, threshold, and seed give the same sample. With `--against`
-  and the same seed, the draw continues down the same order past the excerpts already returned.
+  lexical score on top of that match. Report that as a keyword match.
+- The same index, task, budget, encoding, threshold, and seed give the same sample. A passage's place
+  in the order depends on the seed and its content, not on record IDs or on how the scan is ordered or
+  batched. With `--against` and the same seed, the draw continues down the same order past the
+  excerpts already returned.
 - A small sample is noisy, and a representative sample still cannot establish causation. `stats`
   reports both sizes so that uncertainty can be stated.
 
@@ -190,22 +197,29 @@ for dossier in dossiers:
     print(dossier.per["value"], dossier.tokens, len(dossier.items))
 ```
 
+Dictionaries and rows supply the field directly; a `Record` supplies it in `metadata`, for example
+`Record(text, metadata={"company_year": "acme-2021"})`.
+
 The collection is scanned once and each distinct passage text is scored once, however many groups it
 appears in. Selection then runs separately for each value with its own `--tokens` budget, under either
 rule, as if that group were the whole collection: occurrence counts, citations, and sample populations
-are the group's own. (With `--local`, lexical scores are still computed over the whole collection.)
-Output is JSON Lines, so `--json` is required: one object per value,
+are the group's own. A representative sample of a group is the same one that selecting that group alone
+with the same seed would give; a text shared by several groups gets the same random number in each, so
+samples of different groups are not independent on shared text. (With `--local`, lexical scores are
+still computed over the whole collection.) Output is JSON Lines, so `--json` is required: one object per value,
 in order of first appearance, in the usual schema plus `per` (`field`, `value`, and the value's indexed
 `passages` and `occurrences`). A value with no relevant passage still gets a line with an empty context.
 `--against` accepts the JSON Lines of an earlier `--per` run; an excerpt it lists is excluded from every group.
 
 Limits: the field must hold a string or integer in every record, and one field is supported, so build
-a combined column for keys such as company and year. With `--group-by`, all rows of a merged record must
-share the value. `--scan shortlist` is refused, and `--local` reads every lexical match instead of a
+a combined column for keys such as company and year. Values are compared as text, so 1 and "1" name the
+same group, as with `--group-by`. With `--group-by`, all rows of a merged record must share the value. `--scan shortlist` is refused, and `--local` reads every lexical match instead of a
 shortlist, because one global shortlist would starve small groups. `calls`, `cost`, and timings in each
 line describe the shared scan; do not sum them across lines. Memory grows with the number of groups,
-most under the default rule, which keeps up to `--candidates` passages for each. Excerpts subdivided to
-fit a budget smaller than one passage can differ between groups and are then scored separately.
+most under the default rule, which keeps up to `--candidates` passages for each, and with the collection:
+to score a text once, a scan under `--per` or `--sample` remembers one score per distinct passage (about
+150 bytes each). Excerpts subdivided to fit a budget smaller than one passage can differ between groups;
+different excerpts are scored separately, identical ones once.
 
 ## Python and agents
 
