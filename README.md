@@ -364,5 +364,5 @@ uv run ruff format --check src tests bench
 uv build
 ```
 
-See [benchmarks](https://github.com/keltokhy/jselect/blob/main/docs/BENCHMARKS.md), and the
+See [benchmark methods and results](https://github.com/keltokhy/jselect/blob/main/docs/BENCHMARKS.md) and the
 [companion agent skill](https://github.com/keltokhy/jselect/blob/main/skills/jselect/SKILL.md). MIT licensed.
