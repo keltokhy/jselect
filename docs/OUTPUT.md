@@ -67,19 +67,24 @@ source rows; detailed member mappings are available in JSON.
 
 With `--sample representative`, items are a seeded random sample instead of a relevance/novelty
 selection, in the order drawn. The population is every fitted, previously unseen passage with relevance
-at or above `threshold` (default 0.5; in local mode every passage sharing a task term, default 0).
-Each occurrence of each such passage receives a uniform random key derived from the seed, the passage
-ID, and its first source location. The sample is every occurrence whose key is below a cutoff, and the
-cutoff is the key of the first passage that cannot be added: it does not fit the remaining token budget
-or would exceed `--max-items`. A repeated text is shown once with its `draws`. The fit check reserves
-room for the largest `draws` value a text could show, so a context can end a few tokens short.
+at or above `threshold`, inclusive (default 0.5). In local mode it is every passage sharing a task term,
+to which `threshold` (default 0) is then applied. A population unit is one fitted text within one
+indexed passage. Each occurrence of a unit receives a uniform random key derived from the seed, the
+indexed passage's ID, and the text; caller-supplied record IDs, scan order, and batching play no part.
+The sample is every occurrence whose key is below a cutoff, and the cutoff is the key of the first
+passage that cannot be added: it does not fit the remaining token budget or would exceed `--max-items`.
+A repeated text is shown once with its `draws`, and equal texts from different units become one item.
+
+The fit check reserves room for the largest `draws` value a text could show, so a context can end a few
+tokens short. If the first passage drawn fits only without that reserve, the sample is empty and
+`warnings` says so instead of the usual no-match warning; a larger `--tokens` resolves it.
 
 `stats` then has `selection_method: "random_occurrence_sample_without_replacement"` and:
 
 - `sample`: `"representative"`; `seed`: the seed used; `threshold`: the population's relevance floor.
-- `population_passages`, `population_occurrences`: distinct relevant passages and their total occurrences.
-  Identical excerpts produced by subdividing different parents can be counted as separate passages
-  here; if drawn, they are merged into one item.
+- `population_passages`, `population_occurrences`: relevant units and their total occurrences. Without
+  subdivision a unit is a distinct passage. Identical excerpts cut from different indexed passages are
+  separate units; equal excerpts within one indexed passage are one unit counted once per position.
 - `sample_passages`, `sample_occurrences`: items returned and the sum of their `draws`.
 - `sample_stop`: what ended the draw: `budget`, `max_items`, or `population` (every occurrence was drawn).
 - `candidates` equals `population_passages`. `candidate_limit` and `diversity` are absent because
@@ -100,11 +105,12 @@ order of first appearance. Each line is a complete object in this schema with on
 ```
 
 The values shown are illustrative. `passages` and `occurrences` count the value's distinct indexed passages and their occurrences, relevant
-or not, before any fitting or `--against` exclusion. Within a line, `occurrences`, `sources`, `draws`,
-`candidates`, `selected`, and the population and sample counts belong to that value alone, and every
-source carries `per` with the value. Index counts, `passages_evaluated`, `scored_passages`, `calls`,
+or not, before any fitting or `--against` exclusion; a value whose records hold no text has zero of
+both and still gets a line. Values are text: 1 and "1" are one value. Within a line, `occurrences`,
+`sources`, `draws`, `candidates`, `selected`, and the population and sample counts belong to that value
+alone, and every source carries the value under the reserved key `jselect:per`. Index counts, `passages_evaluated`, `scored_passages`, `calls`,
 `cost`, and the timings other than `selection_seconds` describe the single shared scan and repeat on
-every line. A value with no relevant passage has an empty `context` and the usual warning. An index
+every line; `passages_evaluated` counts distinct texts, each scored once. A value with no relevant passage has an empty `context` and the usual warning. An index
 built with `--per` adds `per` and `per_values` to its `stats`; it remains a schema version 1 index and
 still answers ordinary queries. An error replaces the whole stream with the single error object.
 
