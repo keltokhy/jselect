@@ -38,7 +38,7 @@ def test_same_seed_repeats_the_draw_and_other_seeds_differ():
     assert again.context == runs[2].context
     assert [i.id for i in again.items] == [i.id for i in runs[2].items]
     assert len({r.context for r in runs.values()}) == len(runs)
-    # The draw does not depend on the order in which records were indexed or scanned.
+    # With these explicit source references, the citations as well as the sample repeat.
     assert sample(complaints()[::-1], tokens=600, seed=2).context == runs[2].context
 
 
@@ -140,8 +140,10 @@ def test_draw_stops_at_the_first_passage_that_does_not_fit():
             # The sample is the front of the seeded order: nothing is skipped to make room.
             assert taken == [item.text for item in census[: len(taken)]]
             assert result.stats["sample_stop"] == "budget"
-            assert count_tokens(render([*result.items, census[len(taken)]]), "bytes") > 1500
-            smallest = min(count_tokens(render([i]), "bytes") for i in census if "short" in i.text)
+            assert count_tokens(render([*result.items, census[len(taken)]], sample=True), "bytes") > 1500
+            smallest = min(
+                count_tokens(render([i], sample=True), "bytes") for i in census if "short" in i.text
+            )
             stopped_with_room += 1500 - result.tokens >= smallest + 2
     # Some draws end with room a short passage could have filled; filling it would favor short text.
     assert stopped_with_room > 0
@@ -153,7 +155,7 @@ def test_max_items_fixes_the_sample_size():
     assert result.stats["sample_passages"] == 7 and result.stats["population_passages"] == 40
 
 
-def test_against_is_excluded_from_the_population_and_continues_the_same_order():
+def test_against_removes_texts_from_the_population_and_preserves_the_remaining_order():
     with Index.build(complaints()) as index:
         order = [item.text for item in sample(index, tokens=1_000_000, seed=9).items]
         first = sample(index, tokens=500, seed=9)
