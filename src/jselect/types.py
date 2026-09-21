@@ -6,6 +6,9 @@ from dataclasses import asdict, dataclass
 from dataclasses import field as dc_field
 from typing import Any
 
+# Source-reference key holding a passage's --per value. Namespaced so user metadata cannot collide with it.
+PER = "jselect:per"
+
 
 @dataclass(frozen=True)
 class Record:
@@ -28,19 +31,24 @@ class Passage:
     retrieval_score: float = 0.0
 
 
-def merge_passages(passages: list[Passage]) -> list[Passage]:
-    """Coalesce identical fitted text while retaining known provenance from each parent."""
-    merged: dict[str, Passage] = {}
+def merge_passages(passages: list[Passage], *, apart=None) -> list[Passage]:
+    """Coalesce identical fitted text while retaining known provenance from each parent.
+
+    `apart(passage)` names what equal texts must not be merged across: a --per value, or the
+    indexed parent when sampling. Ordinary selection passes nothing and merges on text alone.
+    """
+    merged: dict[tuple, Passage] = {}
     for p in passages:
-        if p.text not in merged:
-            merged[p.text] = p
+        key = (p.text, apart(p) if apart else None)
+        if key not in merged:
+            merged[key] = p
             continue
-        old = merged[p.text]
+        old = merged[key]
         sources = list(old.sources)
         for ref in p.sources:
             if len(sources) < 5 and ref not in sources:
                 sources.append(ref)
-        merged[p.text] = Passage(
+        merged[key] = Passage(
             old.id,
             old.text,
             sources,
@@ -57,8 +65,11 @@ class Evidence:
     sources: list[dict[str, Any]]
     occurrences: int
     relevance: float
-    novelty: float
+    # None under --sample representative, where novelty plays no part in selection.
+    novelty: float | None
     reason: str
+    # Occurrences of this text that fell in a representative sample; None under the default rule.
+    draws: int | None = None
 
 
 @dataclass
@@ -72,6 +83,14 @@ class Selection:
     stats: dict[str, Any]
     warnings: list[str] = dc_field(default_factory=list)
     schema_version: int = 1
+    # Set by select_per: the field, this context's value, and the value's indexed passage counts.
+    per: dict[str, Any] | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        data = asdict(self)
+        if self.per is None:
+            del data["per"]
+        for item in data["items"]:
+            if item["draws"] is None:
+                del item["draws"]
+        return data
