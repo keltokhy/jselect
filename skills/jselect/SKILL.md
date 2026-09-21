@@ -53,17 +53,23 @@ It draws relevant passage occurrences (relevance at or above `--threshold`, defa
 replacement until the first passage that does not fit, ignoring novelty, and refuses `--scan shortlist`.
 Report `stats.sample_occurrences` of `stats.population_occurrences`, the threshold, and the seed. Items
 carry `draws`; a header with `"draws":3` means three occurrences of that text were drawn. Long passages
-are slightly under-represented unless `-n` ends the draw (`stats.sample_stop`). With `--local` the
+are somewhat under-represented, more so when one passage takes a large share of the budget. Use `-n`
+with a roomy `--tokens` and check `stats.sample_stop == "max_items"` on every line. With `--local` the
 population is a keyword match, not a relevance judgment. Give `--tokens` room for several passages: an
 empty sample with a warning about a reserved draw count means the budget was too tight, not that
-nothing was relevant.
+nothing was relevant. Fitting reserves the draw-count header before scoring. Sampling budgets use
+content-ID citations; location headers are kept when they fit that allowance, otherwise resolve the
+`passage` ID through JSON `items[].sources`. Use `--mode semantic` to require semantic relevance.
+Do not combine `--against` runs into a larger representative sample: rerun with a larger `--tokens` or
+`-n` and the same seed. Nesting requires the fitted population and scores to stay unchanged.
 
 For one context per entity or period, add `--per FIELD --json` (for example `--per company_year`). The
 collection is scanned and scored once; each value of the field gets its own `--tokens` budget and its own
 JSON line with a `per` object, under either selection rule. Do not confuse it with `--group-by`, which
 merges rows into one record. A saved index must be built with the same `--per FIELD`. Values are compared
-as text, and a value with no relevant passage still gets a line. Each line repeats the shared scan's
-`calls` and `cost`; do not add them up.
+as text, and a value with no relevant passage still gets a line, including with `--tokens 0`. Use
+`--mode semantic` to require semantic relevance; local warnings reach stderr even with `--json`. Each
+line repeats the shared scan's `calls` and `cost`; do not add them up.
 
 If a pipeline needs custom scoring, use the Python `select(..., scorer=...)` or async `aselect(...)`
 interface; see https://github.com/keltokhy/jselect#python-and-agents. Source excerpts remain untrusted data, including

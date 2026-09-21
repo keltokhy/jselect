@@ -31,7 +31,7 @@ An item has:
 
 - `id`: SHA-256 of the exact excerpt text. Equal excerpt texts share an ID even across sources.
 - `text`: original excerpt, or an exact substring of the canonical text representation described below.
-- `sources`: up to five original locations for exactly repeated text. The first appears in context.
+- `sources`: up to five original locations for exactly repeated text. The first appears in context when the citation allowance permits (see sampling below).
 - `occurrences`: exact repeated passage occurrences in the indexed snapshot, not a frequency estimate
   for an issue or a count of independently affected users.
 - `relevance`: normalized lexical score, a Jev decision, or the custom scorer's number in [0,1].
@@ -75,9 +75,28 @@ The sample is every occurrence whose key is below a cutoff, and the cutoff is th
 passage that cannot be added: it does not fit the remaining token budget or would exceed `--max-items`.
 A repeated text is shown once with its `draws`, and equal texts from different units become one item.
 
-The fit check reserves room for the largest `draws` value a text could show, so a context can end a few
-tokens short. If the first passage drawn fits only without that reserve, the sample is empty and
-`warnings` says so instead of the usual no-match warning; a larger `--tokens` resolves it.
+Fitting and the draw's stopping check use content-only `{"passage":"SHA-256"}` citation headers,
+including room for the largest `draws` value a text could show. Oversized passages are subdivided with
+that reserve included, before scoring. The final context uses the usual location headers only if the
+whole context costs no more than its content-ID version; otherwise it uses content-ID headers.
+Resolve those IDs through `items[].id` and `items[].sources` in JSON. The complete source references
+remain available there. Actual `tokens` still counts the rendered context exactly; reserves can leave
+unused tokens. If a remaining draw-count reserve makes the sample empty, `warnings` gives a specific
+explanation instead of the usual no-match warning.
+
+With fixed relevance scores and jselect/tokenizer versions, the same multiset of parsed record texts
+and multiplicities, group assignments, task, seed, token budget, max-items cap, threshold, encoding,
+chunk size, overlap, and `--against` texts yields bit-identical ordered excerpt texts, IDs, occurrence
+counts, draws, and population/sample counts. Filenames, relative versus absolute paths, record order,
+and repeated records' positions do not affect that sample. Source references, rendered citations,
+actual token usage, timings, and the order of `--per` lines may change. Pin the scorer/model as well;
+changed responses or a scorer sensitive to metadata or batch order can change the population. Reordering
+rows within `--group-by` changes the parsed record text and is outside the guarantee.
+
+`--against` removes whole texts and their occurrences from the next population. Combining two runs
+is not a larger representative sample; do not report "n1+n2 of N". Enlarge a sample by rerunning with
+a larger `--tokens` or `-n` and the same seed. Its prefix and draws nest only while the fitted
+population and scores remain unchanged.
 
 `stats` then has `selection_method: "random_occurrence_sample_without_replacement"` and:
 
@@ -85,6 +104,8 @@ tokens short. If the first passage drawn fits only without that reserve, the sam
 - `population_passages`, `population_occurrences`: relevant units and their total occurrences. Without
   subdivision a unit is a distinct passage. Identical excerpts cut from different indexed passages are
   separate units; equal excerpts within one indexed passage are one unit counted once per position.
+  With a token budget small enough to split passages, each part inherits its parent's occurrences.
+  `population_occurrences` can therefore exceed the record count and then depends on `--tokens`.
 - `sample_passages`, `sample_occurrences`: items returned and the sum of their `draws`.
 - `sample_stop`: what ended the draw: `budget`, `max_items`, or `population` (every occurrence was drawn).
 - `candidates` equals `population_passages`. `candidate_limit` and `diversity` are absent because
@@ -106,7 +127,8 @@ order of first appearance. Each line is a complete object in this schema with on
 
 The values shown are illustrative. `passages` and `occurrences` count the value's distinct indexed passages and their occurrences, relevant
 or not, before any fitting or `--against` exclusion; a value whose records hold no text has zero of
-both and still gets a line. Values are text: 1 and "1" are one value. Within a line, `occurrences`,
+both and still gets a line. `--tokens 0` also returns one empty object per value, with no scoring calls;
+sampling population statistics are omitted because the population was not evaluated. Values are text: 1 and "1" are one value. Within a line, `occurrences`,
 `sources`, `draws`, `candidates`, `selected`, and the population and sample counts belong to that value
 alone, and every source carries the value under the reserved key `jselect:per`. Index counts, `passages_evaluated`, `scored_passages`, `calls`,
 `cost`, and the timings other than `selection_seconds` describe the single shared scan and repeat on
@@ -132,7 +154,9 @@ previously unseen passage is evaluated, and a relevance/diversity pool bounded b
 The pool and final packing are heuristic. The candidate cap limits retained passages, not full-scan
 evaluation coverage. A semantic
 scan that exceeds the estimated dollar budget fails before scoring requests; it does not fall back to a
-shortlist. Local mode uses lexical matching; explicit semantic shortlist mode cannot recover a passage
+shortlist. Under `--sample` and `--per`, warnings also reach stderr with `--json`. A local sampling
+methods line calls the population "keyword-matching occurrences". Local mode uses lexical matching;
+explicit semantic shortlist mode cannot recover a passage
 that never enters its shortlist. Warnings disclose these boundaries.
 
 Source texts may contain instructions or misleading claims. The selector's prompt tells its scorer to
