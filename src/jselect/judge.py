@@ -8,19 +8,20 @@ import json
 import math
 import os
 import sqlite3
-import time
 from dataclasses import dataclass
 from itertools import islice
 from numbers import Real
 from pathlib import Path
 
 import httpx
+from jevkit_core import JevError, JevFatal, config_dir, credential, parse_usage
+from jevkit_core import transport as shared_transport
+from jevkit_core.errors import RequestExhausted
 
 from .types import Passage
 
 PROMPT_VERSION = "relevance-v2"
 PRICE_PER_MTOK = 0.042
-RETRYABLE = {408, 429, 500, 502, 503, 504, 529}
 
 
 @dataclass(frozen=True)
@@ -33,7 +34,7 @@ class Backend:
 
 
 def resolve_backend(api: str | None = None, model: str | None = None) -> Backend | None:
-    config = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "jev"
+    config = config_dir()
     choices = {
         "typesafe": ("TYPESAFE_API_KEY", "https://api.typesafe.ai/v1/systemone", "jev-1.13.0"),
         "openrouter": (
@@ -48,11 +49,7 @@ def resolve_backend(api: str | None = None, model: str | None = None) -> Backend
         raise ValueError(f"unknown API {api!r}; choose typesafe, openrouter, or gateway")
     for name in [api] if api else choices:
         variable, url, default_model = choices[name]
-        key = os.environ.get(variable, "").strip()
-        source = "env" if key else "config"
-        key_file = config / f"{name}.key"
-        if not key and key_file.is_file():
-            key = key_file.read_text().strip()
+        key, source = credential(name, variable)
         if key:
             if not url and (config / f"{name}.url").is_file():
                 url = (config / f"{name}.url").read_text().strip()
@@ -270,75 +267,49 @@ class JevScorer:
         return [results[i] for i in range(len(passages))]
 
     async def _request(self, client: httpx.AsyncClient, body: dict) -> dict:
-        deadline = time.monotonic() + self.timeout
-        last = "no response"
-        for attempt in range(4):
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                break
-            pause = 0.25 * 2**attempt
-            try:
-                response = await asyncio.wait_for(
-                    client.post(self.backend.url, json=body, timeout=remaining), remaining
-                )
-            except (httpx.TransportError, asyncio.TimeoutError) as e:
-                response = None
-                last = type(e).__name__
-            if response is not None:
-                last = f"HTTP {response.status_code}"
-                if response.status_code == 200:
-                    try:
-                        data = response.json()
-                    except ValueError as e:
-                        raise SemanticError("provider returned invalid JSON") from e
-                    if not isinstance(data, dict):
-                        raise SemanticError("provider returned a non-object response")
-                    usage = data.get("usage") or {}
-                    if not isinstance(usage, dict):
-                        raise SemanticError("provider returned invalid usage")
-                    tokens = usage.get("input_tokens")
-                    if tokens is None:
-                        tokens = len(json.dumps(body).encode()) + 1024
-                    if (
-                        isinstance(tokens, bool)
-                        or not isinstance(tokens, (int, float))
-                        or not math.isfinite(tokens)
-                        or tokens < 0
-                    ):
-                        raise SemanticError("provider returned invalid usage values")
-                    cost = usage.get("cost")
-                    if cost is None:
-                        cost = tokens * PRICE_PER_MTOK / 1e6
-                    if any(
-                        isinstance(v, bool)
-                        or not isinstance(v, (int, float))
-                        or not math.isfinite(v)
-                        or v < 0
-                        for v in (tokens, cost)
-                    ):
-                        raise SemanticError("provider returned invalid usage values")
-                    self.stats["calls"] += 1
-                    self.stats["input_tokens"] += tokens
-                    self.stats["cost"] += cost
-                    if usage.get("cost") is None:
-                        self.stats["cost_source"] = "estimated_at_list_price"
-                    elif self.stats["cost_source"] == "provider_or_list_price":
-                        self.stats["cost_source"] = "provider"
-                    self.stats["model"] = data.get("model", self.backend.model)
-                    return data
-                if response.status_code not in RETRYABLE:
-                    # Do not echo response bodies: they can include credentials or source data.
-                    raise SemanticError(f"{self.backend.name} returned HTTP {response.status_code}")
-                try:
-                    pause = max(pause, float(response.headers.get("Retry-After", 0)))
-                except ValueError:
-                    pass
-            if attempt < 3:
-                self.stats["retries"] += 1
-                await asyncio.sleep(max(0.0, min(pause, deadline - time.monotonic())))
-        raise SemanticError(
-            f"{self.backend.name} request failed within {self.timeout:g}s ({last}); cached results retained"
-        )
+        def retry():
+            self.stats["retries"] += 1
+
+        try:
+            data, _ = await shared_transport.request_json(
+                client,
+                self.backend.url,
+                body,
+                provider=self.backend.name,
+                timeout=self.timeout,
+                on_retry=retry,
+                policy=shared_transport.RetryPolicy(
+                    delay=0.25,
+                    jitter=0,
+                    retry_after=True,
+                    strict_json=True,
+                    require_answers=False,
+                    error_details=False,
+                ),
+            )
+            usage = parse_usage(
+                data.get("usage"),
+                price_per_mtok=PRICE_PER_MTOK,
+                missing_tokens=len(json.dumps(body).encode()) + 1024,
+                fractional_tokens=True,
+            )
+        except RequestExhausted as exc:
+            last = "TimeoutError" if exc.timed_out else exc.last
+            raise SemanticError(
+                f"{self.backend.name} request failed within {self.timeout:g}s "
+                f"({last}); cached results retained"
+            ) from exc
+        except (JevError, JevFatal) as exc:
+            raise SemanticError(str(exc)) from exc
+        self.stats["calls"] += 1
+        self.stats["input_tokens"] += usage.tokens
+        self.stats["cost"] += usage.cost
+        if usage.source == "estimated_from_tokens":
+            self.stats["cost_source"] = "estimated_at_list_price"
+        elif self.stats["cost_source"] == "provider_or_list_price":
+            self.stats["cost_source"] = "provider"
+        self.stats["model"] = data.get("model", self.backend.model)
+        return data
 
 
 def validate_score(value) -> float:
