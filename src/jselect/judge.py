@@ -14,7 +14,7 @@ from numbers import Real
 from pathlib import Path
 
 import httpx
-from jevkit_core import JevError, JevFatal, config_dir, credential, parse_usage
+from jevkit_core import JevError, JevFatal, backend_catalog, config_dir, credential, parse_usage, record_usage
 from jevkit_core import transport as shared_transport
 from jevkit_core.errors import RequestExhausted
 
@@ -35,14 +35,19 @@ class Backend:
 
 def resolve_backend(api: str | None = None, model: str | None = None) -> Backend | None:
     config = config_dir()
+    definitions = backend_catalog(
+        "typesafe",
+        "openrouter",
+        "gateway",
+        models={"typesafe": "jev-1.13.0", "openrouter": "typesafe/jev-1.13", "gateway": "jev-1.13.0"},
+    )
     choices = {
-        "typesafe": ("TYPESAFE_API_KEY", "https://api.typesafe.ai/v1/systemone", "jev-1.13.0"),
-        "openrouter": (
-            "OPENROUTER_API_KEY",
-            "https://openrouter.ai/api/alpha/decisions",
-            "typesafe/jev-1.13",
-        ),
-        "gateway": ("JEV_GATEWAY_API_KEY", os.environ.get("JEV_GATEWAY_URL", ""), "jev-1.13.0"),
+        name: (
+            definition.key_env,
+            os.environ.get(definition.url_env, "") if definition.url_env else definition.url,
+            definition.model,
+        )
+        for name, definition in definitions.items()
     }
     api = api or os.environ.get("JEV_API")
     if api and api not in choices:
@@ -301,9 +306,7 @@ class JevScorer:
             ) from exc
         except (JevError, JevFatal) as exc:
             raise SemanticError(str(exc)) from exc
-        self.stats["calls"] += 1
-        self.stats["input_tokens"] += usage.tokens
-        self.stats["cost"] += usage.cost
+        record_usage(self.stats, usage)
         if usage.source == "estimated_from_tokens":
             self.stats["cost_source"] = "estimated_at_list_price"
         elif self.stats["cost_source"] == "provider_or_list_price":
