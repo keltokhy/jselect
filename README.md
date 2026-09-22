@@ -366,3 +366,21 @@ uv build
 
 See [benchmark methods and results](https://github.com/keltokhy/jselect/blob/main/docs/BENCHMARKS.md) and the
 [companion agent skill](https://github.com/keltokhy/jselect/blob/main/skills/jselect/SKILL.md). MIT licensed.
+
+## Shared JevKit development
+
+This tool uses [`jevkit-runtime`](https://github.com/keltokhy/jevkit-core), imported
+as `jevkit_core`. Clone that repository beside this one as `../jevkit-core`, then
+run `uv sync`. Core Python edits apply on the next invocation of this tool;
+restart long-lived Python processes after editing.
+
+The distribution name is `jevkit-runtime` because `jevkit-core` on PyPI belongs
+to a different project. Until the initial runtime is on PyPI, use the sibling
+checkout for source development. Existing published versions of this tool are
+unaffected by this source migration.
+
+From the core checkout, `python scripts/dev.py setup`, `check`, and `wheel-check`
+set up and validate all five consumers in separate environments. For isolated
+worktrees such as `jgrep-jevkit`, add `--suffix=-jevkit` before the subcommand.
+CI checks out core tag `v0.1.0`; algorithms, prompts, cache identities, and budget
+policies remain in this repository.

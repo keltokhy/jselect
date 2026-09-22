@@ -270,6 +270,7 @@ version = "0.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
+    { name = "jevkit-runtime" },
     { name = "pathspec" },
     { name = "tiktoken" },
 ]
@@ -283,9 +284,31 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "httpx", specifier = ">=0.27" },
+    { name = "jevkit-runtime", editable = "../jevkit-core" },
     { name = "pathspec", specifier = ">=0.12" },
     { name = "tiktoken", specifier = ">=0.8" },
 ]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pytest", specifier = ">=8" },
+    { name = "ruff", specifier = ">=0.11" },
+]
+
+[[package]]
+name = "jevkit-runtime"
+version = "0.1.0"
+source = { editable = "../jevkit-core" }
+dependencies = [
+    { name = "httpx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "httpx", extras = ["http2"], marker = "extra == 'http2'", specifier = ">=0.27" },
+]
+provides-extras = ["http2"]
 
 [package.metadata.requires-dev]
 dev = [
