@@ -1,7 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
 
+- Score passages through the shared `jevkit-runtime` 0.2. Relevance decisions are stored per passage and
+  task in the shared answer cache at `~/.cache/jev/answers.sqlite` instead of a separate score database;
+  earlier score caches are not read. Provider error bodies are still withheld from output.
 - Add `--sample representative` (`sample="representative"` in Python) with `--seed`: a random draw of relevant
   passage occurrences without replacement, reporting population and sample sizes for measurement use.
   Default selection and its output are unchanged.
