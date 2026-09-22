@@ -270,7 +270,7 @@ version = "0.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
-    { name = "jevkit-core" },
+    { name = "jevkit-runtime" },
     { name = "pathspec" },
     { name = "tiktoken" },
 ]
@@ -284,7 +284,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "httpx", specifier = ">=0.27" },
-    { name = "jevkit-core", editable = "../jevkit-core" },
+    { name = "jevkit-runtime", editable = "../jevkit-core" },
     { name = "pathspec", specifier = ">=0.12" },
     { name = "tiktoken", specifier = ">=0.8" },
 ]
@@ -296,7 +296,7 @@ dev = [
 ]
 
 [[package]]
-name = "jevkit-core"
+name = "jevkit-runtime"
 version = "0.1.0"
 source = { editable = "../jevkit-core" }
 dependencies = [
