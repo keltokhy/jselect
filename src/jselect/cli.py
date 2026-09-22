@@ -74,7 +74,7 @@ def parser_for(command):
     p.add_argument("--version", action="version", version=f"jselect {__version__}")
     p.add_argument("--json", action="store_true", help="emit a versioned JSON object, including JSON errors")
     if command == "doctor":
-        p.add_argument("--api", choices=["typesafe", "openrouter", "gateway"])
+        p.add_argument("--api", choices=list(PROVIDERS))
         return p
     if command in {"inspect", "show"}:
         p.add_argument("path", help="saved .jselect index")
@@ -130,7 +130,7 @@ def parser_for(command):
         help="draw relevant passages at random instead of favoring the most relevant and novel",
     )
     p.add_argument("--seed", type=int, help="random seed for --sample (default: 0)")
-    p.add_argument("--api", choices=["typesafe", "openrouter", "gateway"])
+    p.add_argument("--api", choices=list(PROVIDERS))
     p.add_argument("--model", help="override the pinned Jev model")
     p.add_argument(
         "--budget",

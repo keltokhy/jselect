@@ -29,6 +29,8 @@ PROVIDERS = catalog(
     "typesafe",
     "openrouter",
     "gateway",
+    "diffusiongemma",
+    "laya",
     models={"typesafe": "jev-1.13.0", "openrouter": "typesafe/jev-1.13", "gateway": "jev-1.13.0"},
 )
 

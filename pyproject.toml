@@ -1,13 +1,13 @@
 [project]
 name = "jev-select"
-version = "0.2.0"
+version = "0.3.0"
 description = "Select useful, source-linked evidence for an AI task within a token budget"
 readme = "README.md"
 license = "MIT"
 authors = [{ name = "Khaled Eltokhy" }]
 requires-python = ">=3.10"
 dependencies = [
-    "jevkit-runtime>=0.2.0,<0.3.0","httpx>=0.27", "pathspec>=0.12", "tiktoken>=0.8"]
+    "jevkit-runtime>=0.3.0,<0.4.0","httpx>=0.27", "pathspec>=0.12", "tiktoken>=0.8"]
 keywords = ["cli", "retrieval", "context", "agents", "jev", "semantic search"]
 classifiers = [
     "Development Status :: 4 - Beta",
