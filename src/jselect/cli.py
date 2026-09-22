@@ -12,7 +12,7 @@ from pathlib import Path
 from . import __version__
 from .index import Index
 from .inputs import read_paths
-from .judge import SemanticError, resolve_backend
+from .judge import JevFatal, SemanticError, resolve_backend
 from .select import select, select_per
 
 
@@ -161,7 +161,7 @@ def main(argv=None, *, out=None, err=None, transport=None) -> int:
             issue = None
             try:
                 backend = resolve_backend(args.api)
-            except (OSError, ValueError) as e:
+            except (OSError, ValueError, JevFatal) as e:
                 backend, issue = None, str(e)
             db = sqlite3.connect(":memory:")
             try:
@@ -176,7 +176,7 @@ def main(argv=None, *, out=None, err=None, transport=None) -> int:
                 "auth_verified": False,
                 "api": backend.name if backend else None,
                 "model": backend.model if backend else None,
-                "auth_source": backend.auth_source if backend else "missing",
+                "auth_source": backend.key_source if backend else "missing",
                 "hint": issue
                 or (None if backend else "Set TYPESAFE_API_KEY or OPENROUTER_API_KEY for semantic scoring."),
             }
@@ -299,7 +299,7 @@ def main(argv=None, *, out=None, err=None, transport=None) -> int:
         return 0
     except BrokenPipeError:
         return 0
-    except (ValueError, OSError, sqlite3.Error, SemanticError) as e:
+    except (ValueError, OSError, sqlite3.Error, SemanticError, JevFatal) as e:
         if json_mode:
             print(
                 json.dumps(

@@ -108,7 +108,7 @@ def test_cache_isolated_by_model_and_endpoint(tmp_path):
         try:
             return await scorer.score("task", [passage])
         finally:
-            scorer.close()
+            await scorer.close()
 
     for url, model in [("https://a.test", "v1"), ("https://a.test", "v2"), ("https://b.test", "v2")]:
         assert asyncio.run(exercise(url, model)) == [0.95]
@@ -125,9 +125,9 @@ def test_invalid_batch_is_never_partially_cached(tmp_path, bad):
     try:
         with pytest.raises(SemanticError):
             asyncio.run(scorer.score("task", [Passage("a", "text", []), Passage("b", "other", [])]))
-        assert scorer.db.execute("SELECT COUNT(*) FROM scores").fetchone()[0] == 0
+        assert scorer.store.db.execute("SELECT COUNT(*) FROM answers").fetchone()[0] == 0
     finally:
-        scorer.close()
+        asyncio.run(scorer.close())
 
 
 def test_cli_doctor_no_key_and_json_errors(tmp_path):

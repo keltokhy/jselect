@@ -720,7 +720,7 @@ async def aselect(
         raise
     finally:
         if judge:
-            judge.close()
+            await judge.close()
         if own_index:
             index.close()
 

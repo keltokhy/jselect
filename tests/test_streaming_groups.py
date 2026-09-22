@@ -125,7 +125,7 @@ def test_provider_total_timeout_and_error_usage(monkeypatch):
         await asyncio.sleep(0.1)
         return httpx.Response(200, json={"answers": {"p0": {"noul": 1}}})
 
-    with pytest.raises(SemanticError, match="TimeoutError") as caught:
+    with pytest.raises(SemanticError, match="deadline exceeded") as caught:
         select(
             ["some passage"], task="test", mode="semantic", timeout=0.01, _transport=httpx.MockTransport(slow)
         )
