@@ -110,7 +110,9 @@ class JevScorer:
 
     def key(self, task: str, passage: Passage) -> str:
         backend = self.backend
-        return digest(["jselect", PROMPT_VERSION, backend.name, backend.url, backend.model, task, passage.text])
+        return digest(
+            ["jselect", PROMPT_VERSION, backend.name, backend.url, backend.model, task, passage.text]
+        )
 
     @staticmethod
     def body(task: str, passages: list[Passage], model: str) -> dict:
@@ -158,8 +160,9 @@ class JevScorer:
 
     def _estimate(self, body: dict) -> float:
         # UTF-8 bytes plus fixed overhead are a conservative estimate of input tokens.
-        # Actual gateway prices and opaque provider overhead can differ; also stop on measured spend.
-        return (len(json.dumps(body, ensure_ascii=False).encode()) + 1024) * self.backend.price_per_mtok / 1e6
+        # Actual gateway prices and provider overhead can differ; measured spend also stops a run.
+        size = len(json.dumps(body, ensure_ascii=False).encode()) + 1024
+        return size * self.backend.price_per_mtok / 1e6
 
     def preflight(self, task, passages):
         """Check an entire streamed scan against the estimate before sending any paid requests."""
@@ -184,7 +187,8 @@ class JevScorer:
                 else "reduce --candidates, use a shortlist, or raise --budget"
             )
             raise SemanticError(
-                f"estimated semantic spend ${estimate + spent:.4f} exceeds budget ${self.budget:.4f}; {advice}"
+                f"estimated semantic spend ${estimate + spent:.4f} exceeds budget ${self.budget:.4f}; "
+                f"{advice}"
             )
 
     async def score(self, task: str, passages: list[Passage]) -> list[float]:

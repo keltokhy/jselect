@@ -9,11 +9,11 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
+from jevkit_runtime import JevFatal, resolve
+
 from . import __version__
 from .index import Index
 from .inputs import read_paths
-from jevkit_runtime import JevFatal, resolve
-
 from .judge import PROVIDERS, SemanticError
 from .select import select, select_per
 
