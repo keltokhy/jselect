@@ -12,7 +12,9 @@ from pathlib import Path
 from . import __version__
 from .index import Index
 from .inputs import read_paths
-from .judge import JevFatal, SemanticError, resolve_backend
+from jevkit_runtime import JevFatal, resolve
+
+from .judge import PROVIDERS, SemanticError
 from .select import select, select_per
 
 
@@ -160,7 +162,7 @@ def main(argv=None, *, out=None, err=None, transport=None) -> int:
         if command == "doctor":
             issue = None
             try:
-                backend = resolve_backend(args.api)
+                backend = resolve(PROVIDERS, args.api, missing_ok=True)
             except (OSError, ValueError, JevFatal) as e:
                 backend, issue = None, str(e)
             db = sqlite3.connect(":memory:")

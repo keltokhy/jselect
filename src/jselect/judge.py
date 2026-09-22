@@ -9,7 +9,7 @@ from itertools import islice
 from numbers import Real
 from pathlib import Path
 
-from jevkit_core import (
+from jevkit_runtime import (
     AnswerStore,
     Backend,
     Client,
@@ -20,7 +20,6 @@ from jevkit_core import (
     catalog,
     digest,
     request_body,
-    resolve,
 )
 
 from .types import Passage
@@ -32,11 +31,6 @@ PROVIDERS = catalog(
     "gateway",
     models={"typesafe": "jev-1.13.0", "openrouter": "typesafe/jev-1.13", "gateway": "jev-1.13.0"},
 )
-
-
-def resolve_backend(api: str | None = None, model: str | None = None) -> Backend | None:
-    """The configured provider, or None when nothing was asked for and nothing is configured."""
-    return resolve(PROVIDERS, api, model=model, missing_ok=True)
 
 
 class SemanticError(RuntimeError):

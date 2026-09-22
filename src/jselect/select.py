@@ -17,7 +17,9 @@ from pathlib import Path
 
 from .index import Index, _digest
 from .inputs import records
-from .judge import JevScorer, SemanticError, resolve_backend, validate_score
+from jevkit_runtime import resolve
+
+from .judge import PROVIDERS, JevScorer, SemanticError, validate_score
 from .text import chunks, count_tokens, features, similarity, words
 from .types import PER, Evidence, Passage, Selection, merge_passages
 
@@ -450,7 +452,7 @@ async def aselect(
     if tokens == 0 and not _per:
         empty = Selection(task, "", [], 0, tokens, encoding, {"mode": mode, "calls": 0, "cost": 0.0})
         return empty
-    backend = None if tokens == 0 or mode == "local" or scorer else resolve_backend(api, model)
+    backend = None if tokens == 0 or mode == "local" or scorer else resolve(PROVIDERS, api, model=model, missing_ok=True)
     if tokens and mode == "semantic" and not backend and not scorer:
         raise ValueError(
             "semantic mode needs TYPESAFE_API_KEY or OPENROUTER_API_KEY; use --mode local offline"
