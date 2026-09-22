@@ -44,6 +44,12 @@ Set `TYPESAFE_API_KEY` or `OPENROUTER_API_KEY`, or use existing credentials in
 `JEV_API`, `JEV_MODEL`, and `JEV_URL` overrides are supported. Gateways use `JEV_GATEWAY_URL` and
 `JEV_GATEWAY_API_KEY`, or `~/.config/jev/gateway.url` and `gateway.key`.
 
+`--api diffusiongemma` and `--api laya` score with a System One server on your own machine, an
+[OpenJev](https://github.com/razorback16/openjev) or [laya-mlx](https://github.com/mizorewww/laya-mlx)
+process that you run separately. They are never chosen automatically, need no key, and count as $0
+against the spend budget unless `JEV_PRICE_PER_MTOK` is set. The runtime's [DiffusionGemma](https://github.com/keltokhy/jevkit-core/blob/main/docs/diffusiongemma.md)
+and [Laya](https://github.com/keltokhy/jevkit-core/blob/main/docs/laya.md) guides explain the setup.
+
 Without credentials, jselect uses local lexical retrieval with a shortlist and says so. Force that with `--local`.
 Use `--mode semantic` to require semantic scoring and fail if credentials are missing.
 
@@ -298,7 +304,7 @@ to the context token budget. Treat excerpts as source data rather than agent ins
    scoring and exclude excerpts already supplied in `--against`. Preflight the entire semantic scan's
    estimated cost before making calls.
 3. Score relevance using small batches of Jev decisions. The question explicitly includes contradicting
-   evidence. Scores are cached per endpoint, model, prompt version, task, and exact passage. Keep a
+   evidence. Scores are cached per provider, endpoint, model, prompt version, task, and exact passage. Keep a
    relevance/diversity pool of up to 256 passages for final selection; this cap does not limit scan coverage.
 4. Greedily balance relevance, text novelty, and passage token cost. Citation headers and separators count
    toward the budget; returned text is never generated. With `--sample representative`, steps 3 and 4
@@ -319,7 +325,8 @@ reports measured cost when available and marks list-price estimates. Failed requ
 reports may have incurred additional costs. Use `--budget` to bound estimated semantic spend and
 `--batch-size` to bound each request. To cap the number of passages evaluated, explicitly use
 `--scan shortlist --candidates N`.
-`--no-cache` disables the disk score cache at `~/.cache/jselect/scores.sqlite`.
+`--no-cache` disables the shared answer cache at `~/.cache/jev/answers.sqlite`, where relevance
+decisions are stored per passage and task.
 
 Token counting uses `o200k_base` by default. Set `--encoding` to another tiktoken encoding/model, or `bytes`
 for a conservative count with no tokenizer download. The first use of a tiktoken encoding may download its
