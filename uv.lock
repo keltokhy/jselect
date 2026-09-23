@@ -266,7 +266,7 @@ wheels = [
 
 [[package]]
 name = "jev-select"
-version = "0.3.0"
+version = "0.3.1"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
@@ -297,7 +297,7 @@ dev = [
 
 [[package]]
 name = "jevkit-runtime"
-version = "0.3.0"
+version = "0.3.1"
 source = { editable = "../jevkit-core" }
 dependencies = [
     { name = "httpx" },

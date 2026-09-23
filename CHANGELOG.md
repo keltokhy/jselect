@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1
+
+- The tool itself is unchanged from 0.3.0; this release brings its README on PyPI up to date.
+- Document the local decision servers in the README, and add a security policy.
+
 ## 0.3.0
 
 - Add `--api diffusiongemma` and `--api laya` for System One servers running on your own machine,
