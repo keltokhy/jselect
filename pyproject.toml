@@ -1,6 +1,6 @@
 [project]
 name = "jev-select"
-version = "0.3.1"
+version = "0.4.0"
 description = "Select useful, source-linked evidence for an AI task within a token budget"
 readme = "README.md"
 license = "MIT"
