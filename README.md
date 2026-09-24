@@ -44,11 +44,11 @@ Set `TYPESAFE_API_KEY` or `OPENROUTER_API_KEY`, or use existing credentials in
 `JEV_API`, `JEV_MODEL`, and `JEV_URL` overrides are supported. Gateways use `JEV_GATEWAY_URL` and
 `JEV_GATEWAY_API_KEY`, or `~/.config/jev/gateway.url` and `gateway.key`.
 
-`--api diffusiongemma` and `--api laya` score with a System One server on your own machine, an
-[OpenJev](https://github.com/razorback16/openjev) or [laya-mlx](https://github.com/mizorewww/laya-mlx)
+`--api diffusiongemma`, `--api laya` and `--api gliner` score with a System One server on your own machine, an
+[OpenJev](https://github.com/razorback16/openjev), [laya-mlx](https://github.com/mizorewww/laya-mlx) or [GLiNER2.5-Decide](https://huggingface.co/fastino/GLiNER2.5-Decide)
 process that you run separately. They are never chosen automatically, need no key, and count as $0
-against the spend budget unless `JEV_PRICE_PER_MTOK` is set. The runtime's [DiffusionGemma](https://github.com/keltokhy/jevkit-core/blob/main/docs/diffusiongemma.md)
-and [Laya](https://github.com/keltokhy/jevkit-core/blob/main/docs/laya.md) guides explain the setup.
+against the spend budget unless `JEV_PRICE_PER_MTOK` is set. The runtime's [DiffusionGemma](https://github.com/keltokhy/jevkit-core/blob/main/docs/diffusiongemma.md),
+[Laya](https://github.com/keltokhy/jevkit-core/blob/main/docs/laya.md) and [GLiNER](https://github.com/keltokhy/jevkit-core/blob/main/docs/gliner.md) guides explain the setup.
 
 Without credentials, jselect uses local lexical retrieval with a shortlist and says so. Force that with `--local`.
 Use `--mode semantic` to require semantic scoring and fail if credentials are missing.
