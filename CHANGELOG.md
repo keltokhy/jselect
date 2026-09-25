@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Ask a joint-read server (`--api diffusiongemma`) about one passage per call. It answers each passage in
+  the light of the others in its call, and jselect stores scores per passage, so a score given beside one
+  batch could be reused in another. Scores cached this way by earlier versions are no longer used; other
+  providers are unaffected. ([#4](https://github.com/keltokhy/jselect/issues/4))
+
 ## 0.4.0
 
 - Add `--api gliner`, a local [GLiNER2.5-Decide](https://huggingface.co/fastino/GLiNER2.5-Decide)

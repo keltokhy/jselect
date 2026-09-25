@@ -1,6 +1,7 @@
 import asyncio
 import io
 import json
+from dataclasses import replace
 
 import httpx
 import pytest
@@ -113,6 +114,21 @@ def test_cache_isolated_by_model_and_endpoint(tmp_path):
     for url, model in [("https://a.test", "v1"), ("https://a.test", "v2"), ("https://b.test", "v2")]:
         assert asyncio.run(exercise(url, model)) == [0.95]
     assert len(fake.calls) == 3
+
+
+def test_a_joint_read_server_is_asked_one_passage_at_a_time(tmp_path):
+    fake = Fake()
+    joint = Backend("diffusiongemma", "http://127.0.0.1:8080/v1/systemone", "openjev-latest", joint_reads=True)
+    passages = [Passage(f"p{i}", f"relevant issue {i}", []) for i in range(3)]
+    scorer = JevScorer(joint, batch_size=8, cache_path=tmp_path / "cache.sqlite", transport=httpx.MockTransport(fake))
+    try:
+        assert asyncio.run(scorer.score("issues", passages)) == [0.95] * 3
+    finally:
+        asyncio.run(scorer.close())
+    assert len(fake.calls) == 3 and all(len(call["questions"]) == 1 for call in fake.calls)
+    # Scores cached by earlier versions, which batched these passages, are keyed apart and never served.
+    batched = JevScorer(replace(joint, joint_reads=False), cache=False)
+    assert scorer.key("issues", passages[0]) != batched.key("issues", passages[0])
 
 
 @pytest.mark.parametrize("bad", [None, [], {"p0": {"noul": 0.9}, "p1": {"noul": "bad"}}])
