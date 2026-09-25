@@ -118,9 +118,12 @@ def test_cache_isolated_by_model_and_endpoint(tmp_path):
 
 def test_a_joint_read_server_is_asked_one_passage_at_a_time(tmp_path):
     fake = Fake()
-    joint = Backend("diffusiongemma", "http://127.0.0.1:8080/v1/systemone", "openjev-latest", joint_reads=True)
+    url = "http://127.0.0.1:8080/v1/systemone"
+    joint = Backend("diffusiongemma", url, "openjev-latest", joint_reads=True)
     passages = [Passage(f"p{i}", f"relevant issue {i}", []) for i in range(3)]
-    scorer = JevScorer(joint, batch_size=8, cache_path=tmp_path / "cache.sqlite", transport=httpx.MockTransport(fake))
+    scorer = JevScorer(
+        joint, batch_size=8, cache_path=tmp_path / "cache.sqlite", transport=httpx.MockTransport(fake)
+    )
     try:
         assert asyncio.run(scorer.score("issues", passages)) == [0.95] * 3
     finally:
