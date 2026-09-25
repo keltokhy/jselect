@@ -65,6 +65,10 @@ class JevScorer:
         if concurrency < 1 or not 1 <= batch_size <= 16 or not math.isfinite(timeout) or timeout <= 0:
             raise ValueError("concurrency and timeout must be positive; batch size must be 1..16")
         self.backend, self.budget = backend, budget
+        # A joint-read server answers each passage in the light of the others in its call, and scores are
+        # stored per passage, so there every passage is asked alone.
+        if backend.joint_reads:
+            batch_size = 1
         self.concurrency, self.batch_size, self.timeout = concurrency, batch_size, timeout
         self.full_population = full_population
         self.cached_passages = self.scored_passages = 0
@@ -113,9 +117,10 @@ class JevScorer:
 
     def key(self, task: str, passage: Passage) -> str:
         backend = self.backend
-        return digest(
-            ["jselect", PROMPT_VERSION, backend.name, backend.url, backend.model, task, passage.text]
-        )
+        parts = ["jselect", PROMPT_VERSION, backend.name, backend.url, backend.model, task, passage.text]
+        if backend.joint_reads:
+            parts.append("alone")  # never serve a score that was given beside other passages
+        return digest(parts)
 
     @staticmethod
     def body(task: str, passages: list[Passage], model: str) -> dict:
