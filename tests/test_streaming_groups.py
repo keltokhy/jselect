@@ -123,7 +123,7 @@ def test_provider_total_timeout_and_error_usage(monkeypatch):
 
     async def slow(request):
         await asyncio.sleep(0.1)
-        return httpx.Response(200, json={"answers": {"p0": {"noul": 1}}})
+        return httpx.Response(200, json={"answers": {"p0.useful": {"noul": 1}}})
 
     with pytest.raises(SemanticError, match="deadline exceeded") as caught:
         select(
@@ -149,7 +149,7 @@ def test_fitted_excerpts_can_be_traced_back_to_saved_parent(tmp_path):
 def test_invalid_usage_is_a_structured_provider_error(monkeypatch, usage):
     monkeypatch.setenv("OPENROUTER_API_KEY", "fixture-key")
     transport = httpx.MockTransport(
-        lambda _: httpx.Response(200, json={"answers": {"p0": {"noul": 1}}, "usage": usage})
+        lambda _: httpx.Response(200, json={"answers": {"p0.useful": {"noul": 1}}, "usage": usage})
     )
     with pytest.raises(SemanticError, match="usage"):
         select(["text"], task="test", mode="semantic", _transport=transport)
@@ -171,7 +171,7 @@ def test_provider_retry_is_bounded_and_accounted(monkeypatch):
         if len(calls) == 1:
             return httpx.Response(429, headers={"Retry-After": "0"})
         return httpx.Response(
-            200, json={"answers": {"p0": {"noul": 0.9}}, "usage": {"input_tokens": 100, "cost": None}}
+            200, json={"answers": {"p0.useful": {"noul": 0.9}}, "usage": {"input_tokens": 100, "cost": None}}
         )
 
     result = select(["text"], task="test", mode="semantic", _transport=httpx.MockTransport(handler))

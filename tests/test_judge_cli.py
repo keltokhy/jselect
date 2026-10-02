@@ -22,7 +22,10 @@ class Fake:
         if self.status != 200:
             return httpx.Response(self.status, json={"error": "SECRET must never be printed"})
         await asyncio.sleep(0.001)
-        answers = {key: {"noul": 0.95 if "relevant" in text else 0.05} for key, text in body["state"].items()}
+        answers = {
+            qid: {"noul": 0.95 if "relevant" in body["state"][qid.split(".")[0]] else 0.05}
+            for qid in body["questions"]
+        }
         return httpx.Response(
             200,
             json={
@@ -121,20 +124,24 @@ def test_a_joint_read_server_is_asked_one_passage_at_a_time(tmp_path):
     url = "http://127.0.0.1:8080/v1/systemone"
     joint = Backend("diffusiongemma", url, "openjev-latest", joint_reads=True)
     passages = [Passage(f"p{i}", f"relevant issue {i}", []) for i in range(3)]
-    scorer = JevScorer(
-        joint, batch_size=8, cache_path=tmp_path / "cache.sqlite", transport=httpx.MockTransport(fake)
-    )
-    try:
-        assert asyncio.run(scorer.score("issues", passages)) == [0.95] * 3
-    finally:
-        asyncio.run(scorer.close())
-    assert len(fake.calls) == 3 and all(len(call["questions"]) == 1 for call in fake.calls)
-    # Scores cached by earlier versions, which batched these passages, are keyed apart and never served.
-    batched = JevScorer(replace(joint, joint_reads=False), cache=False)
-    assert scorer.key("issues", passages[0]) != batched.key("issues", passages[0])
+
+    def score(backend):
+        scorer = JevScorer(
+            backend, batch_size=8, cache_path=tmp_path / "cache.sqlite", transport=httpx.MockTransport(fake)
+        )
+        try:
+            return asyncio.run(scorer.score("issues", passages))
+        finally:
+            asyncio.run(scorer.close())
+
+    # Scores given beside other passages, as a batching server gives them, are never served alone.
+    assert score(replace(joint, joint_reads=False)) == [0.95] * 3
+    assert len(fake.calls) == 1
+    assert score(joint) == [0.95] * 3
+    assert len(fake.calls) == 4 and all(len(call["questions"]) == 1 for call in fake.calls[1:])
 
 
-@pytest.mark.parametrize("bad", [None, [], {"p0": {"noul": 0.9}, "p1": {"noul": "bad"}}])
+@pytest.mark.parametrize("bad", [None, [], {"p0.useful": {"noul": 0.9}, "p1.useful": {"noul": "bad"}}])
 def test_invalid_batch_is_never_partially_cached(tmp_path, bad):
     scorer = JevScorer(
         Backend("fixture", "https://test", "v1", "key", "env"),

@@ -197,7 +197,10 @@ def test_cli_writes_one_json_object_per_group_and_scores_each_text_once(tmp_path
     async def fake(request):
         body = json.loads(request.content)
         calls.append(body)
-        answers = {key: {"noul": 0.95 if "strong" in text else 0.05} for key, text in body["state"].items()}
+        answers = {
+            qid: {"noul": 0.95 if "strong" in body["state"][qid.split(".")[0]] else 0.05}
+            for qid in body["questions"]
+        }
         return httpx.Response(200, json={"answers": answers, "usage": {"input_tokens": 10, "cost": 0.00001}})
 
     argv = ["complaints", str(path), "--per", "company_year", "--tokens", "300", "--seed", "2"]

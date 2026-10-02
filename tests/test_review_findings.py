@@ -158,7 +158,7 @@ def test_per_scores_a_shared_excerpt_once_and_pays_for_it_once(monkeypatch):
         async def fake(request, calls=calls):
             body = json.loads(request.content)
             calls.append(body)
-            answers = {key: {"noul": 0.9} for key in body["state"]}
+            answers = {qid: {"noul": 0.9} for qid in body["questions"]}
             return httpx.Response(
                 200, json={"answers": answers, "usage": {"cost": 0.000001, "input_tokens": 1}}
             )

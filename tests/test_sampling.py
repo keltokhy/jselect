@@ -239,9 +239,10 @@ class Fake:
     async def __call__(self, request):
         body = json.loads(request.content)
         self.calls.append(body)
+        texts = {qid: body["state"][qid.split(".")[0]] for qid in body["questions"]}
         answers = {
-            key: {"noul": 0.95 if "relevant" in text else 0.4 if "maybe" in text else 0.05}
-            for key, text in body["state"].items()
+            qid: {"noul": 0.95 if "relevant" in text else 0.4 if "maybe" in text else 0.05}
+            for qid, text in texts.items()
         }
         return httpx.Response(200, json={"answers": answers, "usage": {"input_tokens": 10, "cost": 0.00001}})
 

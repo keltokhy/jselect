@@ -1,7 +1,12 @@
 # Changelog
 
-## Unreleased
+## 0.5.0
 
+- Move onto jevkit-runtime 0.4 (`>=0.4.2,<0.5.0`), so jselect installs beside the other JevKit tools.
+  Passages are asked as the runtime's packed requests, with questions typed as `Noul`; a passage's
+  score is still stored on its own and reused whatever batch it is later asked in, and the runtime
+  closes the answer store it opens. The store is the runtime's `answers.v3.sqlite`, so scores cached
+  by 0.4.0 are asked again once. ([#5](https://github.com/keltokhy/jselect/issues/5))
 - Ask a joint-read server (`--api diffusiongemma`) about one passage per call. It answers each passage in
   the light of the others in its call, and jselect stores scores per passage, so a score given beside one
   batch could be reused in another. Scores cached this way by earlier versions are no longer used; other
