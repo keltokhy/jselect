@@ -325,7 +325,7 @@ reports measured cost when available and marks list-price estimates. Failed requ
 reports may have incurred additional costs. Use `--budget` to bound estimated semantic spend and
 `--batch-size` to bound each request. To cap the number of passages evaluated, explicitly use
 `--scan shortlist --candidates N`.
-`--no-cache` disables the shared answer cache at `~/.cache/jev/answers.sqlite`, where relevance
+`--no-cache` disables the shared answer cache at `~/.cache/jev/answers.v3.sqlite`, where relevance
 decisions are stored per passage and task.
 
 Token counting uses `o200k_base` by default. Set `--encoding` to another tiktoken encoding/model, or `bytes`
@@ -389,7 +389,7 @@ unaffected by this source migration.
 
 From the core checkout, `python scripts/dev.py setup`, `check`, and `wheel-check`
 set up and validate all five consumers in separate environments.
-CI checks out core tag `v0.3.2`. Prompts, question construction, and budget policies
+CI checks out core tag `v0.4.2`. Prompts, question construction, and budget policies
 remain in this repository; answer identity, the answer store, transport, and metering
-are the runtime's. Runtime 0.2 keys and stores answers differently from 0.1, so a cache
+are the runtime's. Runtime 0.4 keys and stores answers differently from 0.3, so a cache
 written by an earlier version is re-asked once after upgrading.
